@@ -1,0 +1,100 @@
+// Prisma schema for IoT Logistics Backend
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("user")
+  createdAt    DateTime @default(now())
+}
+
+model Device {
+  id             Int       @id @default(autoincrement())
+  deviceId       String    @unique
+  name           String?
+  encryptionKey  String
+  secretHash     String
+  createdAt      DateTime  @default(now())
+  sensorData     SensorData[]
+  thresholds     Threshold[]
+  shipments      Shipment[]
+  alerts         Alert[]
+}
+
+model Vehicle {
+  id        Int          @id @default(autoincrement())
+  plate     String       @unique
+  name      String?
+  createdAt DateTime     @default(now())
+  data      SensorData[]
+  shipments Shipment[]
+}
+
+model Order {
+  id        Int          @id @default(autoincrement())
+  code      String       @unique
+  product   String
+  createdAt DateTime     @default(now())
+  data      SensorData[]
+  shipments Shipment[]
+}
+
+model Shipment {
+  id        Int      @id @default(autoincrement())
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   Int
+  device    Device   @relation(fields: [deviceId], references: [id])
+  deviceId  Int
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicleId Int
+  route     String?
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+}
+
+model SensorData {
+  id         Int       @id @default(autoincrement())
+  device     Device    @relation(fields: [deviceId], references: [id])
+  deviceId   Int
+  temperature Float?
+  humidity    Float?
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime  @default(now())
+  order       Order?    @relation(fields: [orderId], references: [id])
+  orderId     Int?
+  vehicle     Vehicle?  @relation(fields: [vehicleId], references: [id])
+  vehicleId   Int?
+}
+
+model Threshold {
+  id       Int    @id @default(autoincrement())
+  device   Device @relation(fields: [deviceId], references: [id])
+  deviceId Int
+  type     String
+  min      Float
+  max      Float
+  alerts   Alert[]
+
+  @@unique([deviceId, type], name: "deviceId_type")
+}
+
+model Alert {
+  id           Int       @id @default(autoincrement())
+  device       Device    @relation(fields: [deviceId], references: [id])
+  deviceId     Int
+  type         String
+  value        Float
+  createdAt    DateTime  @default(now())
+  threshold    Threshold @relation(fields: [thresholdId], references: [id])
+  thresholdId  Int
+}
+
