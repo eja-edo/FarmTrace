@@ -75,28 +75,31 @@ Decrypted plaintext JSON:
 ### Architecture (Mermaid)
 ```mermaid
 flowchart LR
-  subgraph Device[ESP32 Devices]
+  subgraph Device ["ESP32 Devices"]
     D1((ESP32))
   end
-  subgraph Broker[Mosquitto MQTT]
+
+  subgraph Broker ["Mosquitto MQTT"]
     B1[(MQTT Broker)]
   end
-  subgraph Backend[Node.js Backend]
-    G[IoT Gateway (MQTT Listener)]
-    R[REST API (Express)]
-    S[Services: IoT, Alert, Threshold]
-    A[Auth]
+
+  subgraph Backend ["Node.js Backend"]
+    G["IoT Gateway (MQTT Listener)"]
+    R["REST API (Express)"]
+    S["Services: IoT, Alert, Threshold"]
+    A["Auth"]
   end
-  subgraph DB[(PostgreSQL)]
+
+  subgraph DB ["PostgreSQL"]
     P[(Prisma ORM)]
   end
 
-  D1 -- iot/{device}/data --> B1
-  B1 -- subscribe --> G
-  R -- /iot/data --> S
-  S -- read/write --> P
+  D1 -- "iot/{device}/data" --> B1
+  B1 -- "subscribe" --> G
+  R -- "/iot/data" --> S
+  S -- "read/write" --> P
   P --- DB
-  S -- alerts --> B1
+  S -- "alerts" --> B1
 ```
 
 ### IoT Data Flow
