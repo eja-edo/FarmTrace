@@ -53,7 +53,7 @@ export async function getAllDevices(req, res, next) {
 export async function getDevice(req, res, next) {
   try {
     const id = parseInt(req.params.id, 10);
-    
+
     const device = await prisma.device.findUnique({
       where: { id },
       include: {
@@ -129,7 +129,7 @@ export async function updateDevice(req, res, next) {
   try {
     const id = parseInt(req.params.id, 10);
     const { error, value } = deviceUpdateSchema.validate(req.body);
-    
+
     if (error) {
       return res.status(400).json({ error: error.message });
     }

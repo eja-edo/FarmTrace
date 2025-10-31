@@ -4,9 +4,9 @@
  * @returns {Object} - { page, limit }
  */
 export function getPaginationParams(query) {
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(query.limit, 10) || 10));
-  return { page, limit };
+    const page = Math.max(1, parseInt(query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(query.limit, 10) || 10));
+    return { page, limit };
 }
 
 /**
@@ -17,15 +17,15 @@ export function getPaginationParams(query) {
  * @returns {Object} - Pagination metadata
  */
 export function paginationMeta(page, limit, totalItems) {
-  const totalPages = Math.ceil(totalItems / limit);
-  return {
-    page,
-    limit,
-    totalPages,
-    totalItems,
-    hasNext: page < totalPages,
-    hasPrev: page > 1
-  };
+    const totalPages = Math.ceil(totalItems / limit);
+    return {
+        page,
+        limit,
+        totalPages,
+        totalItems,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+    };
 }
 
 /**
@@ -37,27 +37,27 @@ export function paginationMeta(page, limit, totalItems) {
  * @returns {Promise<Object>} - { data, page, limit, totalPages, totalItems }
  */
 export async function paginate(model, query = {}, page = 1, limit = 10) {
-  const skip = (page - 1) * limit;
-  const take = limit;
+    const skip = (page - 1) * limit;
+    const take = limit;
 
-  const [data, totalItems] = await Promise.all([
-    model.findMany({
-      ...query,
-      skip,
-      take
-    }),
-    model.count({ where: query.where })
-  ]);
+    const [data, totalItems] = await Promise.all([
+        model.findMany({
+            ...query,
+            skip,
+            take
+        }),
+        model.count({ where: query.where })
+    ]);
 
-  const totalPages = Math.ceil(totalItems / limit);
+    const totalPages = Math.ceil(totalItems / limit);
 
-  return {
-    data,
-    page,
-    limit,
-    totalPages,
-    totalItems,
-    hasNext: page < totalPages,
-    hasPrev: page > 1
-  };
+    return {
+        data,
+        page,
+        limit,
+        totalPages,
+        totalItems,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+    };
 }

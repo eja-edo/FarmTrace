@@ -5,7 +5,7 @@ import { paginate, paginationMeta, getPaginationParams } from '../utils/paginati
 export async function getAllVehicles(req, res, next) {
   try {
     const { page, limit } = getPaginationParams(req.query);
-    
+
     const query = {
       select: {
         id: true,
@@ -47,9 +47,9 @@ export async function getVehicleTrack(req, res, next) {
     });
 
     if (!shipments || shipments.length === 0) {
-      return res.json({ 
-        success: true, 
-        data: [], 
+      return res.json({
+        success: true,
+        data: [],
         pagination: {
           page,
           limit,
@@ -72,9 +72,9 @@ export async function getVehicleTrack(req, res, next) {
 
     const result = await paginate(prisma.deviceLocation, query, page, limit);
 
-    res.json({ 
-      success: true, 
-      data: result.data, 
+    res.json({
+      success: true,
+      data: result.data,
       pagination: {
         page: result.page,
         limit: result.limit,

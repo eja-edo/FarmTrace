@@ -7,7 +7,7 @@ import { paginate, getPaginationParams } from '../utils/pagination.js';
 export async function getAllOrders(req, res, next) {
   try {
     const { page, limit } = getPaginationParams(req.query);
-    
+
     const query = {
       select: {
         id: true,

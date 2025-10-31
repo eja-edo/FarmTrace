@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import {
-  createShipment,
-  listShipments,
-  getShipment,
-  updateShipment,
-  deleteShipment,
-  getShipmentStats
+    createShipment,
+    listShipments,
+    getShipment,
+    updateShipment,
+    deleteShipment,
+    getShipmentStats
 } from '../controllers/shipmentController.js';
 
 const router = Router();
