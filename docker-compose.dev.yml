@@ -17,6 +17,7 @@ services:
       # Mount node_modules as anonymous volume to use container's node_modules
       - /app/node_modules
     command: sh -c "npx prisma db push && node prisma/seed.js && npm run dev"
+    # Enable Node.js debugger
     environment:
       - NODE_ENV=development
 
@@ -47,4 +48,3 @@ volumes:
   pgdata: {}
   mosquitto_data: {}
   mosquitto_log: {}
-

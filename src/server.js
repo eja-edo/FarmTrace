@@ -2,7 +2,8 @@ import './config/dotenv.js';
 import { createServer } from 'http';
 import app from './app.js';
 import { initMqtt } from './config/mqtt.js';
-import { logger } from './utils/logger.js';
+import { initSocket } from './realtime/socket.js';
+import { logger, logError } from './utils/logger.js';
 import { connectDb } from './config/database.js';
 
 const PORT = process.env.PORT || 3000;
@@ -14,12 +15,20 @@ server.listen(PORT, async () => {
   try {
     await connectDb();
     logger.info('Database connected');
+
+    // Initialize Socket.IO for realtime events
+    initSocket(server);
+    logger.info('Socket.IO initialized');
+
     await initMqtt();
     logger.info('MQTT initialized');
   } catch (err) {
-    logger.error({ err }, 'Failed to initialize MQTT');
+    if (err instanceof Error) logError(err, 'Failed to initialize services', { phase: 'startup' });
+    else logger.error('Failed to initialize services', { err });
+    process.exit(1);
   }
 });
 
 export default server;
+
 

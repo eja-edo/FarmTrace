@@ -1,13 +1,21 @@
 ## IoT Logistics Backend (Node.js + Express + Prisma)
 
-Production-ready backend for smart delivery with IoT devices (ESP32). Supports REST + MQTT ingestion, AES-256-GCM payload decryption, JWT auth, PostgreSQL storage, and alerting via MQTT.
+Production-ready backend for smart delivery with IoT devices (ESP32). Supports REST + MQTT ingestion, JWT auth, PostgreSQL storage, realtime WebSocket updates, and comprehensive analytics.
+
+### ✨ Version 2.0 Features
+- ✅ **Realtime WebSocket Server** - Socket.IO with JWT authentication
+- ✅ **Analytics Dashboard** - Device stats, sensor aggregations, alert tracking
+- ✅ **Shipment Management** - Complete CRUD with tracking data
+- ✅ **Enhanced Security** - Rate limiting, CORS, Helmet middleware
+- ✅ **Pagination Support** - All list endpoints support pagination
+- ✅ **Comprehensive Testing** - 5 test scripts with 100+ test cases
 
 ### Stack
 - Node.js 20, Express (ES Modules)
 - Prisma ORM + PostgreSQL
+- Socket.IO 4.x (WebSocket)
 - MQTT (Mosquitto)
 - JWT (jsonwebtoken)
-- AES-256-GCM (crypto)
 - Winston + Pino HTTP logging
 - Docker + Docker Compose
 
@@ -36,41 +44,91 @@ npm run dev
 ```
 
 ### REST API
-- POST `/auth/login` - { email, password } => { token }
-- POST `/auth/device` - { deviceId, secret } => { token } (tạm thời-sau này sẽ sử dụng Challenge – Response để thay thế)
-- POST `/iot/data` - Ingest IoT payload (JWT required)
-- GET `/orders/:id/tracking` - Latest data for order
-- GET `/vehicles/:id/track` - GPS track for vehicle
-- GET `/config/device/:id` - Device thresholds
-- POST `/config/device/:id/update` - Upsert threshold
+- **Authentication**
+  - POST `/auth/login` - { username, password } => { token, user }
+  
+- **IoT Data Ingestion**
+  - POST `/iot/data` - Ingest sensor data (no auth required for devices)
+  
+- **Device Management**
+  - GET `/device` - List all devices
+  - GET `/device/:id` - Get device details
+  - POST `/device` - Register new device
+  - PUT `/device/:id` - Update device
+  - DELETE `/device/:id` - Delete device
+  - GET `/device/:id/sensors` - Get sensor data (paginated) ✨NEW
+  - GET `/device/:id/location` - Get location history (paginated) ✨NEW
+  
+- **Vehicle Tracking**
+  - GET `/vehicles` - List all vehicles
+  - GET `/vehicles/:id` - Get vehicle details
+  - GET `/vehicles/:id/track` - GPS track (paginated, fixed)
+  
+- **Order Management**
+  - GET `/orders` - List all orders
+  - GET `/orders/:id` - Get order details
+  - GET `/orders/:id/track` - Order tracking (paginated, fixed)
+  
+- **Shipment Management** ✨NEW
+  - POST `/shipments` - Create shipment
+  - GET `/shipments` - List shipments (paginated, filterable)
+  - GET `/shipments/:id` - Get shipment with tracking data
+  - PUT `/shipments/:id` - Update shipment
+  - DELETE `/shipments/:id` - Delete shipment
+  - GET `/shipments/stats` - Shipment statistics
+  
+- **Analytics & Statistics** ✨NEW
+  - GET `/analytics/dashboard` - Dashboard overview (24h)
+  - GET `/analytics/devices` - Device statistics
+  - GET `/analytics/sensors/:deviceId` - Sensor min/max/avg
+  - GET `/analytics/alerts` - Alert statistics
+  - GET `/analytics/shipments` - Shipment statistics
+  
+- **Realtime** ✨NEW
+  - WebSocket: `ws://localhost:3000` - Socket.IO connection
+  - GET `/api/stream/devices/:id` - SSE fallback
+  - GET `/api/realtime/stats` - Connection statistics
+
+📚 **Full API Documentation:** [docs/API_REFERENCE.md](./docs/API_REFERENCE.md)
 
 ### MQTT Topics
-- `iot/{device_id}/data` - device -> server (encrypted)
+- `iot/{device_id}/data` - device -> server (JSON)
 - `iot/{device_id}/alert` - server -> device alerts
 - `iot/{device_id}/config` - server -> device config (future)
 
 ### Payload Format
-HTTP/MQTT body:
+IoT data submission (HTTP or MQTT):
 ```json
 {
-  "device_id": "esp32-001",
-  "encrypted_data": {
-    "ciphertext": "...base64...",
-    "iv": "...base64...",
-    "authTag": "...base64..."
+  "timestamp": "2024-01-16T10:00:00Z",
+  "temperature": 25.5,
+  "humidity": 60.2,
+  "vibration": 0.8,
+  "gps": {
+    "latitude": 10.762622,
+    "longitude": 106.660172,
+    "speed": 45.5
   }
 }
 ```
-Decrypted plaintext JSON:
-```json
-{
-  "temperature": 5.1,
-  "humidity": 56.3,
-  "gps": { "lat": 10.78, "lon": 106.66 },
-  "orderId": 1,
-  "vehicleId": 1
-}
+
+### WebSocket Events ✨NEW
+```javascript
+// Connect with JWT authentication
+const socket = io('http://localhost:3000', {
+  auth: { token: 'your-jwt-token' }
+});
+
+// Subscribe to device updates
+socket.emit('subscribe:device', { deviceId: 'ESP32-001' });
+
+// Listen for realtime events
+socket.on('sensor:reading', (data) => { /* temperature, humidity, vibration */ });
+socket.on('device:location', (data) => { /* GPS coordinates */ });
+socket.on('alert:new', (data) => { /* threshold alerts */ });
 ```
+
+📚 **WebSocket Guide:** [docs/REALTIME_GUIDE.md](./docs/REALTIME_GUIDE.md)
 
 ### Architecture (Mermaid)
 ```mermaid
@@ -103,22 +161,72 @@ flowchart LR
 ```
 
 ### IoT Data Flow
-1. Device sends `{ device_id, encrypted_data }` via MQTT topic `iot/{device_id}/data` or REST `/iot/data` with JWT.
-2. Backend authenticates JWT (for REST) and looks up device by `device_id` to get AES key.
-3. Decrypt AES-256-GCM payload, parse JSON.
+1. Device sends `{ device_id, data }` via MQTT topic `iot/{device_id}/data` or REST `/iot/data` with JWT.
+2. Backend authenticates JWT (for REST) and looks up device by `device_id`.
+3. Parse JSON data directly (no encryption/decryption).
 4. Persist to `SensorData` with GPS/temperature/humidity.
 5. Check `Threshold` per device; if out of range, create `Alert` and publish MQTT `iot/{device_id}/alert`.
 6. Dashboard/mobile consumes REST endpoints for tracking.
 
 ### Notes
 - Use HTTPS in production (behind reverse proxy).
-- Rotate JWT secrets and device secrets periodically.
-- Ensure devices and server share the same AES key per device.
+- Rotate JWT secrets periodically.
+- WebSocket connections throttled (sensors: 2Hz, GPS: 1Hz).
+- Rate limiting: 100 req/15min (general), 60 req/min (IoT).
+
+---
+
+## 🧪 Testing
+
+### Quick Test Commands
+```bash
+# Run all API tests
+npm run test:api
+
+# Interactive API testing
+npm run test:api:interactive
+
+# Test IoT device simulation
+npm run test:iot
+
+# Test shipment workflow
+npm run test:shipment
+
+# Test WebSocket connection
+npm run test:socket
+
+# Quick performance test
+npm run test:performance
+
+# Full test suite
+npm run test:all
+```
+
+### Test Scripts
+- **test-api.js** - Complete API testing (100+ test cases)
+- **test-iot-device.js** - IoT device simulator (MQTT/HTTP)
+- **test-shipment-workflow.js** - End-to-end shipment lifecycle
+- **test-socket-client.js** - WebSocket connection testing
+- **test-performance.js** - Load testing & performance metrics
+
+📚 **Testing Guide:** [scripts/QUICK_GUIDE.md](./scripts/QUICK_GUIDE.md)
+
+---
+
+## 📚 Documentation
+
+- **[API Reference](./docs/API_REFERENCE.md)** - Complete API documentation with examples
+- **[Realtime Guide](./docs/REALTIME_GUIDE.md)** - WebSocket integration guide
+- **[Implementation Summary](./docs/IMPLEMENTATION_SUMMARY.md)** - System overview & improvements
+- **[Deployment Checklist](./docs/DEPLOYMENT_CHECKLIST.md)** - Production deployment guide
+- **[Testing Scripts](./scripts/README.md)** - Comprehensive testing documentation
+
+---
 
 ## Kiến trúc dự án (Architecture)
 
 ### Thành phần chính
-- Backend (Express, ESM): xử lý REST, MQTT, xác thực, giải mã, lưu DB, phát cảnh báo.
+- Backend (Express, ESM): xử lý REST, MQTT, xác thực, lưu DB, phát cảnh báo.
 - PostgreSQL + Prisma: lưu trữ users, devices, shipments, orders, sensorData, thresholds, alerts.
 - Mosquitto (MQTT): nhận dữ liệu từ thiết bị; backend subscribe `iot/+/data` và publish alert/config.
 - Logger: Pino cho HTTP và Winston cho ứng dụng.
@@ -132,7 +240,6 @@ src/
     database.js         # Prisma client + connectDb
     mqtt.js             # khởi tạo MQTT client và subscribe topics
     jwt.js              # thông số JWT
-    crypto.js           # thông số AES-256-GCM
     dotenv.js           # nạp biến môi trường
   controllers/          # xử lý HTTP cho từng module
     authController.js
@@ -141,7 +248,7 @@ src/
     vehicleController.js
     configController.js
   services/             # nghiệp vụ lõi
-    iotService.js       # parse/decrypt/persist sensor data
+    iotService.js       # parse/persist sensor data
     alertService.js     # kiểm tra ngưỡng và phát cảnh báo
     thresholdService.js # CRUD ngưỡng theo thiết bị
   routes/               # khai báo endpoints
@@ -155,7 +262,6 @@ src/
     errorHandler.js     # 404 + global error handler
   utils/
     logger.js           # Winston + Pino logger
-    encryption.js       # AES-256-GCM encrypt/decrypt helpers
     response.js         # helpers phản hồi chuẩn JSON
 prisma/
   schema.prisma         # mô hình dữ liệu
@@ -166,7 +272,7 @@ mosquitto/
 
 ### Mô hình dữ liệu (tóm tắt)
 - `User`: tài khoản quản trị/ứng dụng.
-- `Device`: thiết bị IoT (deviceId, encryptionKey đối xứng AES, secretHash để lấy JWT).
+- `Device`: thiết bị IoT (deviceId và secretHash để lấy JWT).
 - `Vehicle`: phương tiện vận chuyển.
 - `Order`: đơn hàng.
 - `Shipment`: gắn `Order` + `Device` + `Vehicle` theo chuyến.
@@ -177,12 +283,12 @@ mosquitto/
 ## Bảo mật & xác thực
 - JWT áp dụng cho user và device.
 - Device lấy JWT qua `/auth/device` bằng `deviceId` + `secret` (hash lưu trong DB).
-- Payload từ device gửi lên phải mã hóa AES-256-GCM. Khóa đối xứng lấy từ `Device.encryptionKey` trên server.
+- Payload từ device gửi lên dưới dạng JSON thuần túy (không mã hóa).
 
 ## Dòng dữ liệu IoT chi tiết
 1. Thiết bị gửi MQTT `iot/{device_id}/data` hoặc REST `/iot/data` (header Bearer token với JWT device).
-2. Backend tìm `Device` theo `device_id`, lấy khóa AES.
-3. Giải mã `encrypted_data` bằng AES-256-GCM → JSON `{ temperature, humidity, gps, orderId, vehicleId }`.
+2. Backend tìm `Device` theo `device_id`.
+3. Parse JSON data trực tiếp → `{ temperature, humidity, gps, orderId, vehicleId }`.
 4. Lưu `SensorData` (bao gồm GPS nếu có).
 5. Đọc `Threshold` theo thiết bị, so sánh giá trị; nếu vượt ngưỡng → tạo `Alert` và publish MQTT `iot/{device_id}/alert`.
 
@@ -194,10 +300,12 @@ mosquitto/
 ```json
 {
   "device_id": "esp32-001",
-  "encrypted_data": {
-    "ciphertext": "base64",
-    "iv": "base64",
-    "authTag": "base64"
+  "data": {
+    "temperature": 5.1,
+    "humidity": 56.3,
+    "gps": { "lat": 10.78, "lon": 106.66 },
+    "orderId": 1,
+    "vehicleId": 1
   }
 }
 ```
@@ -256,10 +364,15 @@ curl -sS -X POST http://localhost:3000/auth/login \
 ```json
 {
   "device_id": "esp32-001",
-  "encrypted_data": {
-    "ciphertext": "...",
-    "iv": "...",
-    "authTag": "..."
+  "data": {
+    "temperature": 5.2,
+    "humidity": 60.1,
+    "gps": {
+      "lat": 10.78,
+      "lon": 106.66
+    },
+    "orderId": 1,
+    "vehicleId": 1
   }
 }
 ```
@@ -306,19 +419,6 @@ curl -sS -X POST http://localhost:3000/auth/login \
 { "type": "temperature", "min": 2, "max": 8 }
 ```
 - 200 OK: trả về bản ghi `Threshold` sau upsert.
-
-## Ví dụ mã hóa AES-256-GCM (demo)
-Thiết bị cần chia sẻ khóa với server (giá trị trong `Device.encryptionKey`). Ví dụ Node.js phía client:
-```js
-import crypto from 'crypto'
-const key = Buffer.from('0123456789abcdef0123456789abcdef') // 32 bytes
-const iv = crypto.randomBytes(12)
-const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
-const data = JSON.stringify({ temperature: 5.2, humidity: 61, gps: { lat: 10.78, lon: 106.66 }, orderId: 1, vehicleId: 1 })
-const ciphertext = Buffer.concat([cipher.update(data, 'utf8'), cipher.final()])
-const authTag = cipher.getAuthTag()
-// gửi { device_id, encrypted_data: { ciphertext: b64, iv: b64, authTag: b64 } }
-```
 
 ## Mã lỗi & xử lý lỗi
 - 400: dữ liệu đầu vào không hợp lệ (Joi validation).

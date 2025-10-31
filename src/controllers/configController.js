@@ -35,3 +35,17 @@ export async function updateDeviceConfig(req, res, next) {
   }
 }
 
+export async function syncDeviceConfig(req, res, next) {
+  try {
+    const deviceIdParam = req.params.id;
+    const device = await prisma.device.findUnique({ where: { deviceId: deviceIdParam } });
+    if (!device) return res.status(404).json({ error: 'Device not found' });
+
+    const { sendDeviceThresholds } = await import('../services/deviceConfigService.js');
+    const result = await sendDeviceThresholds(deviceIdParam);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+

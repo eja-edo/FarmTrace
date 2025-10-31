@@ -8,7 +8,10 @@ import authRoutes from './routes/authRoutes.js';
 import iotRoutes from './routes/iotRoutes.js';
 import vehicleRoutes from './routes/vehicleRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
-import configRoutes from './routes/configRoutes.js';
+import deviceRoutes from './routes/deviceRoutes.js';
+import shipmentRoutes from './routes/shipmentRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
+import realtimeRoutes from './routes/realtimeRoutes.js';
 
 const app = express();
 
@@ -24,7 +27,10 @@ app.use('/auth', authRoutes);
 app.use('/iot', iotRoutes);
 app.use('/vehicles', vehicleRoutes);
 app.use('/orders', orderRoutes);
-app.use('/config', configRoutes);
+app.use('/device', deviceRoutes);
+app.use('/shipments', shipmentRoutes);
+app.use('/analytics', analyticsRoutes);
+app.use('/api', realtimeRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

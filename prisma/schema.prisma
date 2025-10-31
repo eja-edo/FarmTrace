@@ -17,84 +17,91 @@ model User {
 }
 
 model Device {
-  id             Int       @id @default(autoincrement())
-  deviceId       String    @unique
-  name           String?
-  encryptionKey  String
-  secretHash     String
-  createdAt      DateTime  @default(now())
-  sensorData     SensorData[]
-  thresholds     Threshold[]
-  shipments      Shipment[]
-  alerts         Alert[]
+  id           Int              @id @default(autoincrement())
+  deviceId     String           @unique
+  name         String?
+  secretHash   String
+  createdAt    DateTime         @default(now())
+  readings     SensorReading[]
+  locations    DeviceLocation[]
+  thresholds   Threshold[]
+  alerts       Alert[]
+  shipments    Shipment[]
 }
 
 model Vehicle {
-  id        Int          @id @default(autoincrement())
-  plate     String       @unique
-  name      String?
-  createdAt DateTime     @default(now())
-  data      SensorData[]
-  shipments Shipment[]
+  id         Int          @id @default(autoincrement())
+  plate      String       @unique
+  name       String?
+  createdAt  DateTime     @default(now())
+  shipments  Shipment[]
 }
 
 model Order {
-  id        Int          @id @default(autoincrement())
-  code      String       @unique
-  product   String
-  createdAt DateTime     @default(now())
-  data      SensorData[]
-  shipments Shipment[]
+  id         Int              @id @default(autoincrement())
+  code       String           @unique
+  product    String
+  createdAt  DateTime         @default(now())
+  shipments  ShipmentOrder[]
 }
 
 model Shipment {
-  id        Int      @id @default(autoincrement())
-  order     Order    @relation(fields: [orderId], references: [id])
-  orderId   Int
-  device    Device   @relation(fields: [deviceId], references: [id])
-  deviceId  Int
-  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
-  vehicleId Int
-  route     String?
-  startedAt DateTime  @default(now())
-  endedAt   DateTime?
+  id         Int             @id @default(autoincrement())
+  device     Device          @relation(fields: [deviceId], references: [id])
+  deviceId   Int
+  vehicle    Vehicle         @relation(fields: [vehicleId], references: [id])
+  vehicleId  Int
+  route      String?
+  startedAt  DateTime        @default(now())
+  endedAt    DateTime?
+  orders     ShipmentOrder[]
 }
 
-model SensorData {
+model ShipmentOrder {
+  shipment   Shipment @relation(fields: [shipmentId], references: [id])
+  shipmentId Int
+  order      Order    @relation(fields: [orderId], references: [id])
+  orderId    Int
+  @@id([shipmentId, orderId])
+}
+
+model SensorReading {
   id         Int       @id @default(autoincrement())
   device     Device    @relation(fields: [deviceId], references: [id])
   deviceId   Int
-  temperature Float?
-  humidity    Float?
-  latitude    Float?
-  longitude   Float?
-  createdAt   DateTime  @default(now())
-  order       Order?    @relation(fields: [orderId], references: [id])
-  orderId     Int?
-  vehicle     Vehicle?  @relation(fields: [vehicleId], references: [id])
-  vehicleId   Int?
+  type       String    // "temperature", "humidity", "pressure"
+  value      Float
+  createdAt  DateTime  @default(now())
+}
+
+model DeviceLocation {
+  id         Int       @id @default(autoincrement())
+  device     Device    @relation(fields: [deviceId], references: [id])
+  deviceId   Int
+  latitude   Float
+  longitude  Float
+  createdAt  DateTime  @default(now())
 }
 
 model Threshold {
-  id       Int    @id @default(autoincrement())
-  device   Device @relation(fields: [deviceId], references: [id])
-  deviceId Int
-  type     String
-  min      Float
-  max      Float
-  alerts   Alert[]
-
+  id        Int       @id @default(autoincrement())
+  device    Device    @relation(fields: [deviceId], references: [id])
+  deviceId  Int
+  type      String
+  min       Float
+  max       Float
+  alerts    Alert[]
   @@unique([deviceId, type], name: "deviceId_type")
 }
 
 model Alert {
-  id           Int       @id @default(autoincrement())
-  device       Device    @relation(fields: [deviceId], references: [id])
+  id           Int        @id @default(autoincrement())
+  device       Device     @relation(fields: [deviceId], references: [id])
   deviceId     Int
   type         String
   value        Float
-  createdAt    DateTime  @default(now())
-  threshold    Threshold @relation(fields: [thresholdId], references: [id])
+  createdAt    DateTime   @default(now())
+  threshold    Threshold  @relation(fields: [thresholdId], references: [id])
   thresholdId  Int
 }
 

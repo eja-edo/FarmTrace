@@ -7,30 +7,43 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "nodemon src/server.js",
+    "dev": "nodemon --watch src --inspect=0.0.0.0:9229 src/server.js",
     "start": "node src/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:deploy": "prisma migrate deploy",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "test:api": "node scripts/test-api.js --all",
+    "test:api:interactive": "node scripts/test-api.js --interactive",
+    "test:iot": "node scripts/test-iot-device.js continuous http 5000 60000",
+    "test:shipment": "node scripts/test-shipment-workflow.js full",
+    "test:socket": "node scripts/test-socket-client.js",
+    "test:performance": "node scripts/test-performance.js quick",
+    "test:performance:full": "node scripts/test-performance.js full",
+    "test:all": "npm run test:api && npm run test:performance"
   },
   "dependencies": {
+    "@prisma/client": "^5.19.1",
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.2.0",
     "helmet": "^7.1.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "mqtt": "^5.5.3",
     "pino": "^9.5.0",
     "pino-http": "^10.3.1",
+    "pino-pretty": "^10.2.3",
     "prisma": "^5.19.1",
-    "@prisma/client": "^5.19.1",
     "redis": "^4.7.0",
+    "socket.io": "^4.8.1",
     "winston": "^3.14.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7"
+    "node-fetch": "^3.3.2",
+    "nodemon": "^3.1.7",
+    "socket.io-client": "^4.8.1"
   }
 }
-

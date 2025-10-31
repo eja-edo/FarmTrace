@@ -1,21 +1,25 @@
 import { prisma } from '../config/database.js';
 import { getMqttClient } from '../config/mqtt.js';
-import { logger } from '../utils/logger.js';
+import { emitAlert } from '../realtime/emitter.js';
+import { logger, logError } from '../utils/logger.js';
 
-export async function evaluateAndAlert(device, data) {
-  // data: { temperature, humidity, gps: { lat, lon } }
-  const thresholds = await prisma.threshold.findMany({ where: { deviceId: device.id } });
-  const alerts = [];
-  for (const t of thresholds) {
-    if (t.type === 'temperature' && data.temperature != null) {
-      if (data.temperature > t.max || data.temperature < t.min) {
-        alerts.push({ type: 'temperature', value: data.temperature, thresholdId: t.id });
-      }
+export async function evaluateAndAlert(device, sensorData) {
+  // sensorData: { type, value }
+  const thresholds = await prisma.threshold.findMany({
+    where: {
+      deviceId: device.id,
+      type: sensorData.type
     }
-    if (t.type === 'humidity' && data.humidity != null) {
-      if (data.humidity > t.max || data.humidity < t.min) {
-        alerts.push({ type: 'humidity', value: data.humidity, thresholdId: t.id });
-      }
+  });
+
+  const alerts = [];
+  for (const threshold of thresholds) {
+    if (sensorData.value > threshold.max || sensorData.value < threshold.min) {
+      alerts.push({
+        type: sensorData.type,
+        value: sensorData.value,
+        thresholdId: threshold.id
+      });
     }
   }
 
@@ -25,12 +29,24 @@ export async function evaluateAndAlert(device, data) {
     data: alerts.map(a => ({ deviceId: device.id, type: a.type, value: a.value, thresholdId: a.thresholdId }))
   });
 
+  // Publish to MQTT for device notification
   const client = getMqttClient();
   if (client) {
     const topic = `iot/${device.deviceId}/alert`;
     const payload = JSON.stringify({ alerts, at: new Date().toISOString() });
     client.publish(topic, payload, { qos: 1 }, (err) => {
-      if (err) logger.error({ err }, 'Failed to publish alert');
+      if (err) logError(err, 'Failed to publish alert', { device: device.deviceId, topic });
+    });
+  }
+
+  // Emit realtime alert to frontend
+  for (const alert of alerts) {
+    emitAlert(device.deviceId, {
+      deviceId: device.deviceId,
+      type: alert.type,
+      value: alert.value,
+      thresholdId: alert.thresholdId,
+      createdAt: new Date().toISOString()
     });
   }
 
