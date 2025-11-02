@@ -1,0 +1,76 @@
+.search-bar {
+    display: flex;
+    
+
+    background-color: white;
+    border: 1px solid #d1d5db; /* Chỉ giữ một border duy nhất */
+    border-radius: 9999px;
+    padding: 8px 16px;
+    width: 50%; /* Giúp thanh search chiếm đủ không gian */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+   
+    &:hover {
+      border-color: #a1a1aa;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+  
+    .search-icon {
+      flex-shrink: 0; /* Ngăn icon bị co lại */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      color: #6b7280;
+      margin-right: 10px; /* Khoảng cách với input */
+    }
+  
+    input {
+      flex-grow: 1; /* Đảm bảo input mở rộng đúng */
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 14px;
+      color: #111827;
+      padding: 4px 0;
+  
+      &::placeholder {
+        color: #9ca3af;
+      }
+    }
+  }
+  .search-bar-container{
+    width: "100%";
+    display: flex;
+    align-items: right;
+      justify-content: center;
+     
+  }
+  .input-container {
+  display: flex;
+  gap: 10px;
+}
+
+.input-box { 
+  margin-left: 50px;
+  margin-top: 5px;
+  width: 150px;
+  padding: 10px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+  outline: none;
+  transition: all 0.3s ease-in-out;
+}
+
+.input-box:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.5);
+}
+.error-text {
+  color: red;
+  font-size: 14px;
+  margin-top: 5px;
+}
+  

@@ -1,0 +1,43 @@
+.map-page {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+
+    .map-container {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+    }
+
+    .truck-info {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(17, 25, 40, 0.85);
+        color: #fff;
+        padding: 15px;
+        border-radius: 12px;
+        width: 280px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+        h4 {
+            margin-bottom: 10px;
+            color: #8dafe6;
+        }
+
+        .close-btn {
+            margin-top: 10px;
+            width: 100%;
+            background: #8dafe6;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px;
+            cursor: pointer;
+        }
+
+        .close-btn:hover {
+            background: #6b90d8;
+        }
+    }
+}

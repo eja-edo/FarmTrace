@@ -1,0 +1,209 @@
+// 🎨 Màu chủ đạo
+$primary: #60a5fa;
+$accent: #818cf8;
+$danger: #63f179;
+$success: #22c55e;
+$bg-dark: linear-gradient(135deg, #eaf9ea 0%, #f4fff4 100%);
+$card-bg: rgba(255, 255, 255, 0.05);
+$text-light: #cbd5e1;
+
+// 🌌 Toàn trang
+body {
+  background-color: $bg-dark;
+  font-family: 'Inter', sans-serif;
+  color: white;
+  margin: 0;
+  padding: 0;
+}
+
+.app-container {
+  min-height: 100vh;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.dashboard {
+  width: 100%;
+  max-width: 1280px;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+// 🧭 Header
+.header {
+  text-align: center;
+
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    background: linear-gradient(to right, #60a5fa, #a78bfa, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: pulse 2s infinite;
+  }
+
+  p {
+    color: $text-light;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+// 📊 Thẻ trạng thái
+.status-card {
+  background: $danger;
+  color: white;
+  padding: 1.5rem 2rem;
+  border-radius: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .icon {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 0.8rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .info {
+      h2 {
+        font-size: 1.5rem;
+        margin: 0;
+      }
+
+      p {
+        margin: 0.3rem 0 0;
+        font-size: 0.9rem;
+      }
+    }
+  }
+}
+
+// 📈 Biểu đồ
+.chart-card {
+  background: $card-bg;
+  border-radius: 0.8rem;
+  padding: 1.5rem;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  canvas,
+  .recharts-wrapper {
+    width: 100%;
+    height: 250px;
+  }
+}
+
+// ⚙️ Cài đặt ngưỡng
+.threshold-settings {
+  background: $card-bg;
+  border-radius: 0.8rem;
+  padding: 2rem;
+
+  h3 {
+    margin-bottom: 1.2rem;
+    font-size: 1.2rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+
+    label {
+      font-size: 0.9rem;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.6rem 1rem;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+      color: white;
+      transition: 0.3s ease;
+
+      &:focus {
+        border-color: $accent;
+        box-shadow: 0 0 0 2px rgba($accent, 0.3);
+        outline: none;
+      }
+    }
+
+    span {
+      display: block;
+      margin-top: 0.3rem;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+  }
+}
+
+// 🚨 Cảnh báo
+.alerts {
+  background: $card-bg;
+  border-radius: 0.8rem;
+  padding: 2rem;
+
+  h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+  }
+
+  .alert {
+    background: rgba($danger, 0.15);
+    border: 1px solid $danger;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .message {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: white;
+      font-weight: 500;
+    }
+
+    .time {
+      font-size: 0.8rem;
+      color: $text-light;
+    }
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}

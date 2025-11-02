@@ -1,0 +1,44 @@
+.admin-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #041024;
+  color: #e6f0ff;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.2);
+}
+
+.admin-inner {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  padding:0 12px;
+  max-width:1140px;
+  margin:0 auto;
+}
+
+.admin-nav a { color:#cfe8ff; margin-left:12px; text-decoration:none }
+
+.admin-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: #02121f;
+  color: #9fd3ff;
+  display: flex;
+  align-items: center;
+  z-index: 9999;
+}
+
+.admin-content {
+  padding-top: 80px;
+  padding-bottom: 64px;
+  min-height: calc(100vh - 144px);
+}

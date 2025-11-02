@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="skyGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#98FB98;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F0FFF0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="fieldGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#9ACD32;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#32CD32;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Sky background -->
+  <rect width="400" height="200" fill="url(#skyGradient2)"/>
+  
+  <!-- Field background -->
+  <rect x="0" y="200" width="400" height="100" fill="url(#fieldGradient2)"/>
+  
+  <!-- Sun -->
+  <circle cx="350" cy="50" r="25" fill="#FFA500" opacity="0.9"/>
+  
+  <!-- Clouds -->
+  <ellipse cx="60" cy="45" rx="20" ry="12" fill="white" opacity="0.8"/>
+  <ellipse cx="75" cy="45" rx="25" ry="15" fill="white" opacity="0.8"/>
+  <ellipse cx="90" cy="45" rx="18" ry="10" fill="white" opacity="0.8"/>
+  
+  <!-- Farm house -->
+  <rect x="50" y="160" width="80" height="40" fill="#DEB887"/>
+  <polygon points="50,160 90,130 130,160" fill="#8B4513"/>
+  <rect x="70" y="180" width="12" height="20" fill="#654321"/>
+  <rect x="85" y="170" width="15" height="10" fill="#87CEEB"/>
+  <rect x="105" y="170" width="15" height="10" fill="#87CEEB"/>
+  
+  <!-- Barn -->
+  <rect x="200" y="150" width="60" height="50" fill="#CD853F"/>
+  <polygon points="200,150 230,120 260,150" fill="#8B4513"/>
+  <rect x="220" y="170" width="8" height="30" fill="#654321"/>
+  <rect x="235" y="165" width="12" height="8" fill="#87CEEB"/>
+  
+  <!-- Silo -->
+  <rect x="300" y="140" width="20" height="60" fill="#F5F5F5"/>
+  <ellipse cx="310" cy="140" rx="10" ry="5" fill="#C0C0C0"/>
+  <rect x="305" y="150" width="10" height="8" fill="#87CEEB"/>
+  
+  <!-- Trees -->
+  <rect x="20" y="180" width="6" height="30" fill="#8B4513"/>
+  <ellipse cx="23" cy="170" rx="15" ry="20" fill="#228B22"/>
+  
+  <rect x="150" y="185" width="5" height="25" fill="#8B4513"/>
+  <ellipse cx="152.5" cy="175" rx="12" ry="18" fill="#32CD32"/>
+  
+  <rect x="280" y="190" width="7" height="20" fill="#8B4513"/>
+  <ellipse cx="283.5" cy="180" rx="16" ry="22" fill="#228B22"/>
+  
+  <!-- Crops/Vegetables -->
+  <g fill="#228B22">
+    <!-- Corn -->
+    <rect x="80" y="210" width="2" height="15" fill="#8B4513"/>
+    <ellipse cx="81" cy="205" rx="3" ry="8"/>
+    <ellipse cx="81" cy="200" rx="3" ry="8"/>
+    <ellipse cx="81" cy="195" rx="3" ry="8"/>
+    
+    <rect x="90" y="210" width="2" height="15" fill="#8B4513"/>
+    <ellipse cx="91" cy="205" rx="3" ry="8"/>
+    <ellipse cx="91" cy="200" rx="3" ry="8"/>
+    <ellipse cx="91" cy="195" rx="3" ry="8"/>
+    
+    <rect x="100" y="210" width="2" height="15" fill="#8B4513"/>
+    <ellipse cx="101" cy="205" rx="3" ry="8"/>
+    <ellipse cx="101" cy="200" rx="3" ry="8"/>
+    <ellipse cx="101" cy="195" rx="3" ry="8"/>
+  </g>
+  
+  <!-- Carrots -->
+  <g fill="#FF8C00">
+    <ellipse cx="120" cy="225" rx="2" ry="8"/>
+    <ellipse cx="125" cy="225" rx="2" ry="8"/>
+    <ellipse cx="130" cy="225" rx="2" ry="8"/>
+    <ellipse cx="135" cy="225" rx="2" ry="8"/>
+  </g>
+  
+  <!-- Lettuce -->
+  <g fill="#32CD32">
+    <ellipse cx="160" cy="220" rx="4" ry="6"/>
+    <ellipse cx="165" cy="220" rx="4" ry="6"/>
+    <ellipse cx="170" cy="220" rx="4" ry="6"/>
+    <ellipse cx="175" cy="220" rx="4" ry="6"/>
+  </g>
+  
+  <!-- IoT Sensors -->
+  <rect x="320" y="160" width="3" height="40" fill="#C0C0C0"/>
+  <rect x="318" y="160" width="7" height="6" fill="#4169E1"/>
+  <circle cx="321.5" cy="163" r="1.5" fill="#FFD700"/>
+  
+  <rect x="340" y="170" width="3" height="30" fill="#C0C0C0"/>
+  <rect x="338" y="170" width="7" height="6" fill="#4169E1"/>
+  <circle cx="341.5" cy="173" r="1.5" fill="#FFD700"/>
+  
+  <!-- Irrigation system -->
+  <rect x="30" y="240" width="100" height="3" fill="#87CEEB"/>
+  <rect x="40" y="235" width="2" height="10" fill="#87CEEB"/>
+  <rect x="60" y="235" width="2" height="10" fill="#87CEEB"/>
+  <rect x="80" y="235" width="2" height="10" fill="#87CEEB"/>
+  <rect x="100" y="235" width="2" height="10" fill="#87CEEB"/>
+  <rect x="120" y="235" width="2" height="10" fill="#87CEEB"/>
+  
+  <!-- Tractor -->
+  <rect x="250" y="220" width="30" height="15" fill="#FF6347" rx="3"/>
+  <circle cx="260" cy="238" r="5" fill="#2F4F4F"/>
+  <circle cx="275" cy="238" r="5" fill="#2F4F4F"/>
+  <rect x="255" y="225" width="10" height="8" fill="#FFD700"/>
+  
+  <!-- Farm animals -->
+  <ellipse cx="180" cy="230" rx="8" ry="5" fill="#8B4513"/>
+  <ellipse cx="185" cy="225" rx="3" ry="4" fill="#8B4513"/>
+  <circle cx="186" cy="223" r="1" fill="black"/>
+  
+  <ellipse cx="190" cy="235" rx="6" ry="4" fill="#8B4513"/>
+  <ellipse cx="193" cy="232" rx="2" ry="3" fill="#8B4513"/>
+  <circle cx="194" cy="231" r="0.8" fill="black"/>
+</svg>

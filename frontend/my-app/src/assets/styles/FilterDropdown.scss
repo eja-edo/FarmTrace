@@ -1,0 +1,27 @@
+.filter-dropdown {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    padding: 5px 40px;
+    border-radius: 4px;
+    background-color: white;
+  max-width: 500px;
+  padding-left: 50px;
+  padding-right: 10px;
+    svg {
+      margin-right: 8px;
+      color: #888;
+    }
+    align-items: center;
+    justify-content: center;
+    justify-content: space-between;
+   margin-left: 50px;
+    select {
+ 
+
+      border: none;
+      outline: none;
+      background: transparent;
+    }
+  }
+  

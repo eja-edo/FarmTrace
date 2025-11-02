@@ -1,0 +1,106 @@
+/* src/assets/styles/Sidebar.scss */
+
+.sidebar {
+  width: 250px;
+  background-color: #404c57;
+  color: #fff;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  transition: all 0.3s;
+  overflow-y: auto;
+
+  .sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    h3 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+  }
+
+  .sidebar-menu {
+    ul {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+
+      li {
+        position: relative;
+
+        a, span {
+          display: flex;
+          align-items: center;
+          padding: 12px 20px;
+          color: #fff;
+          text-decoration: none;
+          font-size: 14px;
+          transition: all 0.3s;
+          cursor: pointer;
+
+          svg {
+            margin-right: 10px;
+            font-size: 16px;
+          }
+
+          &:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+          }
+        }
+
+        &.active > a {
+          background-color: rgba(255, 255, 255, 0.1);
+          border-left: 3px solid #4caf50;
+        }
+      }
+
+      li.menu-dropdown {
+        > span {
+          cursor: pointer;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 20px;
+          font-size: 14px;
+          transition: all 0.3s ease-in-out;
+
+          &:after {
+            content: '▼';
+            font-size: 10px;
+            margin-left: auto;
+            transition: transform 0.3s;
+          }
+
+          &.active:after {
+            transform: rotate(180deg);
+          }
+
+          &.active {
+            font-weight: bold;
+          }
+        }
+
+        .submenu {
+          background-color: rgba(0, 0, 0, 0.2);
+          overflow: hidden;
+          max-height: 0;
+          transition: max-height 0.3s ease-out;
+          padding-left: 20px;
+          display: block;
+
+          li a {
+            font-size: 13px;
+            color: #ccc;
+          }
+        }
+
+        &.open .submenu {
+          max-height: 500px; // Adjust as needed
+        }
+      }
+    }
+  }
+}

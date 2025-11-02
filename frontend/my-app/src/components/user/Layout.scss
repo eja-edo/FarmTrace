@@ -1,0 +1,83 @@
+/* Basic fixed header/footer layout styles used by Header, Footer and Layout */
+
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #0f172a; /* dark */
+  color: #fff;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 1px 6px rgba(2,6,23,0.4);
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.brand-link {
+  color: #a7f3d0;
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 1.1rem;
+}
+
+.nav-links a {
+  color: #cbd5e1;
+  margin-left: 1rem;
+  text-decoration: none;
+}
+
+.app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: #0b1220;
+  color: #93c5fd;
+  display: flex;
+  align-items: center;
+  z-index: 9998;
+  border-top: 1px solid rgba(255,255,255,0.02);
+}
+
+.footer-inner {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+}
+
+.footer-links a {
+  color: #93c5fd;
+  margin-left: 12px;
+  text-decoration: none;
+}
+
+.app-content {
+  /* add top/bottom padding so content isn't hidden behind header/footer */
+  padding-top: 80px;
+  padding-bottom: 72px;
+  min-height: calc(100vh - 72px);
+}
+
+/* Small helper to keep layout containers aligned with Bootstrap container width if used */
+.container {
+  max-width: 1140px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 12px;
+}
+
+/* small responsive tweak */
+@media (max-width: 576px) {
+  .nav-links { display: none; }
+}

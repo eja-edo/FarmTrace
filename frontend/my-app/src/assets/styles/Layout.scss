@@ -1,0 +1,206 @@
+/* Layout.scss - Stylesheet cho cấu trúc trang admin */
+
+// Biến màu sắc
+$primary-color: #2196f3;
+$primary-dark: #1976d2;
+$primary-light: #bbdefb;
+$accent-color: #ff9800;
+$sidebar-color: #263238;
+$success-color: #4caf50;
+$warning-color: #ff9800;
+$danger-color: #f44336;
+$text-dark: #333;
+$text-light: #757575;
+$border-color: #e0e0e0;
+$header-height: 60px;
+$sidebar-width: 250px;
+$sidebar-collapsed-width: 70px;
+
+.admin-layout {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background-color: #f5f5f5;
+  //margin: 0;
+  
+  &.sidebar-collapsed {
+    .sidebar {
+      width: $sidebar-collapsed-width;
+      
+      .sidebar-header h3 {
+        display: none;
+      }
+      
+      .sidebar-menu {
+        ul li {
+          a, span {
+            padding: 15px;
+            justify-content: center;
+            
+            svg {
+              margin-right: 0;
+              font-size: 18px;
+            }
+            
+            span {
+              display: none;
+            }
+          }
+          
+          &.menu-dropdown {
+            .submenu {
+              position: absolute;
+              left: 100%;
+              top: 0;
+              width: 200px;
+              z-index: 1000;
+              max-height: 0;
+              
+              &.show {
+                max-height: 500px;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    .content {
+      width: calc(100% - #{$sidebar-collapsed-width});
+    }
+  }
+
+  .sidebar {
+    width: 20%;
+    min-width: 220px;
+    max-width: $sidebar-width;
+    background-color: $sidebar-color;
+    color: white;
+    height: 100%;
+    overflow-y: auto;
+    transition: all 0.3s ease;
+    z-index: 100;
+
+    @media (max-width: 768px) {
+      position: fixed;
+      left: 0;
+      top: 0;
+      transform: translateX(-100%);
+      
+      .admin-layout:not(.sidebar-collapsed) & {
+        transform: translateX(0);
+      }
+    }
+  }
+  
+  .content {
+    width: 100%;
+    min-width: 0; // Prevents overflow
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    
+    @media (max-width: 768px) {
+      width: 100%;
+    }
+    
+    .topbar {
+      height: $header-height;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      background-color: white;
+      border-bottom: 1px solid $border-color;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      //margin: 0;
+      
+      .topbar-left {
+        display: flex;
+        align-items: center;
+        
+        .menu-toggle {
+          background: none;
+          border: none;
+          font-size: 20px;
+          color: $text-dark;
+          cursor: pointer;
+          margin-right: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+        }
+        
+        .page-title {
+          font-size: 18px;
+          font-weight: 500;
+          margin: 0;
+          color: $text-dark;
+        }
+      }
+      
+      .user-info {
+        display: flex;
+        align-items: center;
+        
+        .admin-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          overflow: hidden;
+          margin-right: 10px;
+          
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+        }
+        
+        .admin-details {
+          display: flex;
+          flex-direction: column;
+          
+          @media (max-width: 576px) {
+            display: none;
+          }
+          
+          .admin-name {
+            font-weight: 500;
+            color: $text-dark;
+            margin-bottom: 2px;
+          }
+          
+          .logout-btn {
+            background: none;
+            font-weight: bold;
+            border: none;
+            color: rgb(30, 91, 177);
+            padding: 0;
+            font-size: 12px;
+            cursor: pointer;
+            text-align: left;
+            
+            &:hover {
+              text-decoration: underline;
+            }
+          }
+        }
+      }
+    }
+    
+    .main-content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      margin: 0;
+
+      @media (max-width: 576px) {
+        padding: 15px;
+      }
+    }
+  }
+}
