@@ -1,0 +1,86 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'supply-chain-blockchain'
+    environment: 'development'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Rules
+rule_files:
+  - 'alerts.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # cAdvisor
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # Fabric Orderers
+  - job_name: 'fabric-orderers'
+    static_configs:
+      - targets: 
+        - 'orderer.example.com:9443'
+        - 'orderer2.example.com:9444'
+        - 'orderer3.example.com:9445'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+):.*'
+        replacement: '$1'
+
+  # Fabric Peers
+  - job_name: 'fabric-peers'
+    static_configs:
+      - targets:
+        - 'peer0.manufacturer.example.com:9446'
+        - 'peer0.shipper.example.com:9447'
+        - 'peer0.warehouse.example.com:9448'
+        - 'peer0.retailer.example.com:9449'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: 'peer0\.([^.]+)\..*'
+        replacement: '$1'
+
+  # Gateway API
+  - job_name: 'gateway-api'
+    static_configs:
+      - targets: ['host.docker.internal:3000']
+    metrics_path: '/metrics'
+
+  # PostgreSQL
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # CouchDB
+  - job_name: 'couchdb'
+    static_configs:
+      - targets:
+        - 'couchdb0.manufacturer:5984'
+        - 'couchdb0.shipper:5984'
+        - 'couchdb0.warehouse:5984'
+        - 'couchdb0.retailer:5984'
+    metrics_path: '/_node/_local/_prometheus'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: 'couchdb0\.([^:]+):.*'
+        replacement: '$1'

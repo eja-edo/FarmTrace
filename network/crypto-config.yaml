@@ -1,0 +1,56 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# Crypto material configuration for Supply Chain Network
+# Defines 4 organizations: Manufacturer, Shipper, Warehouse, Retailer
+# Plus one Orderer organization
+
+OrdererOrgs:
+  - Name: Orderer
+    Domain: example.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+      - Hostname: orderer2
+      - Hostname: orderer3
+
+PeerOrgs:
+  # Manufacturer Organization
+  - Name: OrgManufacturer
+    Domain: manufacturer.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2
+      # Start: 0
+      # Hostname: peer{{.Index}}
+    Users:
+      Count: 2
+
+  # Shipper Organization
+  - Name: OrgShipper
+    Domain: shipper.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2
+    Users:
+      Count: 2
+
+  # Warehouse Organization
+  - Name: OrgWarehouse
+    Domain: warehouse.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2
+    Users:
+      Count: 2
+
+  # Retailer Organization
+  - Name: OrgRetailer
+    Domain: retailer.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2
+    Users:
+      Count: 2

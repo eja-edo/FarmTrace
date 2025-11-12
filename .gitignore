@@ -1,66 +1,50 @@
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-pnpm-lock.yaml
+# Fabric artifacts
+network/crypto-config/
+network/channel-artifacts/
+network/orderer/genesis.block
+*.tar.gz
+*.block
+*.tx
 
-# Environment
-.env
-.env.*
+# Node modules
+node_modules/
+apps/**/node_modules/
+apps/**/package-lock.json
+
+# Wallets and identities
+apps/**/wallet/
+apps/**/.wallet/
 
 # Logs
-logs/
 *.log
-logs/**/*.log
+logs/
 
-# Build outputs
-dist/
-build/
-out/
+# Environment variables
+.env
+.env.local
 
-# Temporary
-.tmp/
-tmp/
+# Docker
+.docker/
 
-# OS files
+# Database
+offchain/postgres/data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
 Thumbs.db
 
-# Editor directories and files
-.vscode/
-.idea/
-*.sublime-workspace
-*.sublime-project
+# Build artifacts
+build/
+dist/
+*.exe
 
-# Docker
-# Ignore local Docker state and compose override files
-docker-compose.override.yml
-*.local.yml
-**/docker-compose.override.yml
-**/*.local.yml
-
-# Mosquitto persistence (if used)
-mosquitto/data/
-
-# Prisma
-prisma/dev.db
-prisma/.env
-prisma/migrations/
-
-# PM2
-pm2.pid
-pm2.log
-
-# Coverage
-coverage/
-
-# Secrets
-secrets.yml
-
-# Misc
-*.seed
-
-# VS Code Extensions
-.vscode/*.code-workspace
+# Certificates backup
+*.pem.backup
+*.key.backup

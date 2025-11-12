@@ -1,0 +1,12 @@
+{
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "nodemon src/index.js",
+        "test": "jest --coverage",
+        "lint": "eslint src/",
+        "lint:fix": "eslint src/ --fix",
+        "enroll-admin": "node scripts/enrollAdmin.js",
+        "register-user": "node scripts/registerUser.js",
+        "setup-identities": "npm run enroll-admin && npm run register-user"
+    }
+}

@@ -1,0 +1,174 @@
+groups:
+  - name: fabric_alerts
+    interval: 30s
+    rules:
+      # Orderer alerts
+      - alert: OrdererDown
+        expr: up{job="fabric-orderers"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Orderer {{ $labels.instance }} is down"
+          description: "Orderer {{ $labels.instance }} has been down for more than 2 minutes."
+
+      - alert: OrdererClusterDegraded
+        expr: count(up{job="fabric-orderers"} == 1) < 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Orderer cluster is degraded"
+          description: "Less than 2 orderers are running. Cluster consensus may fail."
+
+      # Peer alerts
+      - alert: PeerDown
+        expr: up{job="fabric-peers"} == 0
+        for: 2m
+        labels:
+          severity: high
+        annotations:
+          summary: "Peer {{ $labels.instance }} is down"
+          description: "Peer {{ $labels.instance }} has been down for more than 2 minutes."
+
+      - alert: PeerBlockHeightLag
+        expr: |
+          abs(
+            fabric_ledger_blockchain_height{job="fabric-peers"}
+            - on() group_right
+            max(fabric_ledger_blockchain_height{job="fabric-peers"})
+          ) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Peer {{ $labels.instance }} block height lagging"
+          description: "Peer {{ $labels.instance }} is more than 10 blocks behind."
+
+      # Transaction alerts
+      - alert: HighTransactionFailureRate
+        expr: |
+          rate(fabric_peer_endorser_proposal_validation_failures_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High transaction failure rate"
+          description: "Transaction failure rate is above 10% for 5 minutes."
+
+      - alert: LowTransactionThroughput
+        expr: |
+          rate(fabric_peer_transaction_count[5m]) < 0.1
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low transaction throughput"
+          description: "Transaction rate is below 0.1 TPS for 10 minutes."
+
+  - name: api_alerts
+    interval: 30s
+    rules:
+      - alert: APIDown
+        expr: up{job="gateway-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Gateway API is down"
+          description: "Gateway API has been unreachable for more than 1 minute."
+
+      - alert: HighAPIErrorRate
+        expr: |
+          rate(http_requests_total{status=~"5.."}[5m]) / 
+          rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "High API error rate"
+          description: "API error rate is above 5% for 5 minutes."
+
+      - alert: SlowAPIResponse
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow API response time"
+          description: "95th percentile API response time is above 2 seconds."
+
+  - name: system_alerts
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% for 5 minutes."
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 85% for 5 minutes."
+
+      - alert: DiskSpaceLow
+        expr: |
+          (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Available disk space is below 15%."
+
+      - alert: ContainerDown
+        expr: |
+          absent(container_last_seen{name=~"peer.*|orderer.*|couchdb.*"})
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.name }} is down"
+          description: "Container has been down for more than 2 minutes."
+
+  - name: database_alerts
+    interval: 30s
+    rules:
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database has been down for more than 1 minute."
+
+      - alert: HighDatabaseConnections
+        expr: |
+          pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connection usage"
+          description: "Database connection usage is above 80%."
+
+      - alert: CouchDBDown
+        expr: up{job="couchdb"} == 0
+        for: 2m
+        labels:
+          severity: high
+        annotations:
+          summary: "CouchDB {{ $labels.instance }} is down"
+          description: "CouchDB instance has been down for more than 2 minutes."

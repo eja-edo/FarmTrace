@@ -1,0 +1,50 @@
+{
+    "name": "supply-chain-network",
+    "version": "1.0.0",
+    "client": {
+        "organization": "OrgManufacturer",
+        "connection": {
+            "timeout": {
+                "peer": {
+                    "endorser": "300"
+                },
+                "orderer": "300"
+            }
+        }
+    },
+    "organizations": {
+        "OrgManufacturer": {
+            "mspid": "OrgManufacturerMSP",
+            "peers": [
+                "peer0.manufacturer.example.com"
+            ],
+            "certificateAuthorities": [
+                "ca.manufacturer.example.com"
+            ]
+        }
+    },
+    "peers": {
+        "peer0.manufacturer.example.com": {
+            "url": "grpcs://localhost:7051",
+            "tlsCACerts": {
+                "path": "E:\\server_ship\\blockchainCore\\network\\crypto-config\\peerOrganizations\\manufacturer.example.com\\peers\\peer0.manufacturer.example.com\\tls\\ca.crt"
+            },
+            "grpcOptions": {
+                "ssl-target-name-override": "peer0.manufacturer.example.com",
+                "hostnameOverride": "peer0.manufacturer.example.com"
+            }
+        }
+    },
+    "certificateAuthorities": {
+        "ca.manufacturer.example.com": {
+            "url": "https://localhost:7054",
+            "caName": "ca-manufacturer",
+            "tlsCACerts": {
+                "path": "E:\\server_ship\\blockchainCore\\network\\crypto-config\\peerOrganizations\\manufacturer.example.com\\ca\\ca.manufacturer.example.com-cert.pem"
+            },
+            "httpOptions": {
+                "verify": false
+            }
+        }
+    }
+}
