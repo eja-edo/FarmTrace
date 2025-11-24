@@ -13,10 +13,11 @@ class FabricClient {
 
     async initialize() {
         try {
-            // Load connection profile - use absolute path or process.cwd()
-            const ccpPath = path.join(process.cwd(), '..', '..', 'network', 'connection-manufacturer.json');
+            // Load connection profile - use absolute path from project root
+            const projectRoot = path.join(__dirname, '..', '..', '..', '..');
+            const ccpPath = path.join(projectRoot, 'network', 'connection-manufacturer.json');
             logger.info(`Looking for connection profile at: ${ccpPath}`);
-            logger.info(`process.cwd() is: ${process.cwd()}`);
+            logger.info(`Project root is: ${projectRoot}`);
 
             if (!fs.existsSync(ccpPath)) {
                 throw new Error(`Connection profile not found at ${ccpPath}`);

@@ -10,7 +10,7 @@ Write-Host "Deploying chaincode using Docker..." -ForegroundColor Yellow
 $CHANNEL_NAME = "supplychain-channel"
 $CC_NAME = "supplychain_cc"
 $CC_VERSION = "1.0"
-$CC_SEQUENCE = 4
+$CC_SEQUENCE = 1
 $CC_PATH = "../chaincode/go"
 
 # Package chaincode

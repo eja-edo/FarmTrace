@@ -1,0 +1,1418 @@
+================================================================================
+                    BLOCKCHAIN CORE - PROJECT DESCRIPTION
+                     Hyperledger Fabric Supply Chain System
+================================================================================
+
+Date Created: November 13, 2025
+Project: FarmTrace - Supply Chain Traceability System
+Repository: eja-edo/FarmTrace
+Branch: blockchainCore/dev
+
+================================================================================
+                              TABLE OF CONTENTS
+================================================================================
+
+1. OVERVIEW
+2. ARCHITECTURE
+3. NETWORK COMPONENTS
+4. SMART CONTRACT (CHAINCODE)
+5. DATA STRUCTURES
+6. BUSINESS LOGIC FUNCTIONS
+7. HANDOVER APPROVAL WORKFLOW
+8. SECURITY & ACCESS CONTROL
+9. DEPLOYMENT INFRASTRUCTURE
+10. API GATEWAY
+11. OFF-CHAIN DATABASE
+12. TESTING FRAMEWORK
+13. MONITORING & OPERATIONS
+14. FILE STRUCTURE
+15. DEPLOYMENT STATUS
+16. NEXT STEPS
+
+================================================================================
+                              1. OVERVIEW
+================================================================================
+
+Project Name: Blockchain Supply Chain Traceability System
+Technology: Hyperledger Fabric 2.5
+Consensus: Raft (3 orderers for high availability)
+Programming Language: Go 1.19 (Chaincode), Node.js 16 (API)
+Database: CouchDB (state), PostgreSQL (off-chain)
+Deployment: 100% Docker-based (no local binaries required)
+
+Purpose:
+- Track products through entire supply chain lifecycle
+- Provide immutable audit trail from manufacture to retail
+- Enable two-step handover approval between organizations
+- Ensure data integrity with cryptographic signatures
+- Support multi-organization collaboration with access control
+
+================================================================================
+                            2. ARCHITECTURE
+================================================================================
+
+Network Topology:
+┌─────────────────────────────────────────────────────────────────┐
+│                      BLOCKCHAIN NETWORK                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │  Orderer 1  │  │  Orderer 2  │  │  Orderer 3  │  (Raft)    │
+│  │   :7050     │  │   :8050     │  │   :9050     │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+│         │                 │                 │                   │
+│         └─────────────────┴─────────────────┘                   │
+│                           │                                     │
+│         ┌─────────────────┴─────────────────┐                   │
+│         │                                   │                   │
+│  ┌──────▼──────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │Manufacturer │  │ Shipper  │  │Warehouse │  │ Retailer │   │
+│  │ Peer :7051  │  │Peer:8051 │  │Peer:9051 │  │Peer:10051│   │
+│  │   + CouchDB │  │+ CouchDB │  │+ CouchDB │  │+ CouchDB │   │
+│  │     :5984   │  │  :6984   │  │  :7984   │  │  :8984   │   │
+│  └─────────────┘  └──────────┘  └──────────┘  └──────────┘   │
+│         │              │              │              │         │
+│         └──────────────┴──────────────┴──────────────┘         │
+│                           │                                     │
+│                  ┌────────▼────────┐                            │
+│                  │  Chaincode CC   │                            │
+│                  │ supplychain_cc  │                            │
+│                  │   Version 1.0   │                            │
+│                  │   Sequence 1    │                            │
+│                  └─────────────────┘                            │
+└─────────────────────────────────────────────────────────────────┘
+                           │
+         ┌─────────────────┼─────────────────┐
+         │                 │                 │
+    ┌────▼────┐      ┌────▼────┐      ┌────▼────┐
+    │ API GW  │      │ PostSQL │      │ Monitor │
+    │ Node.js │      │ Off-ch  │      │Prometheu│
+    │  :3000  │      │  :5432  │      │  :9090  │
+    └─────────┘      └─────────┘      └─────────┘
+
+Organizations (MSPs):
+- OrgManufacturerMSP: Creates products, initiates handovers
+- OrgShipperMSP: Handles transportation, accepts/rejects handovers
+- OrgWarehouseMSP: Storage management, receives from shipper
+- OrgRetailerMSP: Final delivery point, marks products as sold
+
+================================================================================
+                         3. NETWORK COMPONENTS
+================================================================================
+
+3.1 ORDERERS (Consensus Layer)
+-------------------------------
+Number: 3 orderers (orderer.example.com, orderer2, orderer3)
+Consensus: Raft (Byzantine Fault Tolerant)
+Ports: 7050, 8050, 9050
+Purpose: Order transactions into blocks, maintain consensus
+Fault Tolerance: Can tolerate 1 node failure (need 2/3 quorum)
+
+Features:
+- Crash fault tolerance (CFT)
+- Leader election automatic
+- Log replication across nodes
+- No single point of failure
+
+3.2 PEERS (Ledger & State Database)
+-----------------------------------
+Total Peers: 4 (one per organization)
+
+peer0.manufacturer.example.com:7051
+- MSP: OrgManufacturerMSP
+- CouchDB: couchdb0.manufacturer:5984
+- Anchor Peer: Yes
+- Chaincode: supplychain_cc (installed)
+- Role: Product creation, handover initiation
+
+peer0.shipper.example.com:8051
+- MSP: OrgShipperMSP
+- CouchDB: couchdb0.shipper:6984
+- Anchor Peer: Yes
+- Chaincode: supplychain_cc (installed)
+- Role: Transportation, handover acceptance/rejection
+
+peer0.warehouse.example.com:9051
+- MSP: OrgWarehouseMSP
+- CouchDB: couchdb0.warehouse:7984
+- Anchor Peer: Yes
+- Chaincode: supplychain_cc (installed)
+- Role: Storage, receiving products
+
+peer0.retailer.example.com:10051
+- MSP: OrgRetailerMSP
+- CouchDB: couchdb0.retailer:8984
+- Anchor Peer: Yes
+- Chaincode: supplychain_cc (installed)
+- Role: Retail operations, mark as sold
+
+Each Peer Contains:
+- Ledger: Blockchain + World State
+- Chaincode container: supplychain_cc
+- TLS certificates for secure communication
+- MSP identity materials (certificates, keys)
+
+3.3 COUCHDB (State Database)
+-----------------------------
+Purpose: Rich query support for world state
+Total Instances: 4 (one per peer)
+Query Features:
+- JSON queries
+- Index support
+- Pagination
+- Sorting and filtering
+
+3.4 CHANNEL
+-----------
+Channel Name: supplychain-channel
+Members: All 4 organizations
+Purpose: Private data sharing between authorized parties
+Endorsement Policy: MAJORITY (3 out of 4 organizations must approve)
+
+================================================================================
+                       4. SMART CONTRACT (CHAINCODE)
+================================================================================
+
+Name: supplychain_cc
+Version: 1.0
+Sequence: 1 (committed and active)
+Language: Go 1.19
+Package ID: supplychain_cc_1.0:a9151403ffc32d6ce09a3a31799d23f6bc3d5688c26a93b4017d3714c884e258
+Location: chaincode/go/supplychain.go
+Size: 907 lines of code
+
+Dependencies:
+- github.com/hyperledger/fabric-contract-api-go v1.2.1
+- encoding/json (standard library)
+- time (standard library)
+
+Deployment Status:
+✅ Packaged: supplychain_cc.tar.gz
+✅ Installed: On all 4 peers
+✅ Approved: By all 4 organizations
+✅ Committed: To supplychain-channel
+✅ Tested: 13/13 unit tests passing
+
+================================================================================
+                          5. DATA STRUCTURES
+================================================================================
+
+5.1 PRODUCT
+-----------
+Primary entity representing physical products in supply chain.
+
+type Product struct {
+    ID              string      // Unique identifier (e.g., "PROD001")
+    Name            string      // Product name
+    Batch           string      // Manufacturing batch number
+    Origin          string      // Place of origin/manufacture
+    ManufactureDate string      // Date manufactured (RFC3339)
+    Status          string      // Current status in supply chain
+    Owner           string      // Current owner organization
+    CurrentHolder   string      // Current physical holder
+    PendingHandover string      // ID of pending handover (if any)
+    MetaHash        string      // Hash of off-chain metadata
+    Approvals       []Approval  // Array of approval records
+    CreatedAt       string      // Timestamp (deterministic from tx)
+    UpdatedAt       string      // Last update timestamp
+}
+
+Status Values:
+- "Manufactured": Initial state after creation
+- "HandoverRequested": Handover pending approval
+- "InTransit": Being transported by shipper
+- "InWarehouse": Stored in warehouse
+- "DeliveredToRetailer": At retail location
+- "Sold": Final state - purchased by end customer
+- "HandoverFailed": Handover rejected, back to sender
+
+5.2 HANDOVER
+------------
+Represents two-step approval workflow for ownership transfer.
+
+type Handover struct {
+    ID                string                 // Format: "HANDOVER-{productID}-{toOrg}"
+    ProductID         string                 // Product being transferred
+    FromOrg           string                 // Sending organization
+    ToOrg             string                 // Receiving organization
+    Status            HandoverStatus         // PENDING/ACCEPTED/REJECTED/EXPIRED
+    RequestedAt       string                 // Timestamp of request
+    RequestedBy       string                 // Identity (CN from certificate)
+    FromSignature     string                 // Sender's signature (metadata)
+    AcceptedAt        string                 // Timestamp of acceptance
+    AcceptedBy        string                 // Identity who accepted
+    ToSignature       string                 // Receiver's signature (metadata)
+    RejectedAt        string                 // Timestamp of rejection
+    RejectionReason   string                 // Reason for rejection
+    Metadata          map[string]interface{} // Additional data (waybill, etc.)
+}
+
+HandoverStatus enum:
+- PENDING: Awaiting receiver approval
+- ACCEPTED: Approved, ownership transferred
+- REJECTED: Declined by receiver
+- EXPIRED: Time limit exceeded (not implemented yet)
+
+5.3 APPROVAL
+------------
+Records each approval action in the supply chain.
+
+type Approval struct {
+    Actor     string                 // Identity performing action
+    ActorMSP  string                 // MSP ID of actor's organization
+    Action    string                 // Type of action (e.g., "AcceptedHandover")
+    Timestamp string                 // When action occurred
+    Signature string                 // Digital signature (metadata)
+    Metadata  map[string]interface{} // Additional context
+}
+
+5.4 SHIPMENT
+------------
+Tracks transportation details.
+
+type Shipment struct {
+    ID          string   // Waybill number
+    ProductID   string   // Product being shipped
+    ShipperID   string   // Shipper identity
+    Waybill     string   // Shipping document number
+    Origin      string   // Starting location
+    Destination string   // Target location
+    Status      string   // Shipment status
+    Temperature float64  // Current temperature (for cold chain)
+    Locations   []string // GPS tracking history
+    CreatedAt   string   // Creation timestamp
+    UpdatedAt   string   // Last update timestamp
+}
+
+5.5 ORDER
+---------
+Purchase orders in the system.
+
+type Order struct {
+    ID         string   // Order identifier
+    ProductIDs []string // Products in this order
+    BuyerID    string   // Buyer identity
+    SellerID   string   // Seller identity
+    Status     string   // Order status
+    TotalPrice float64  // Total order amount
+    CreatedAt  string   // Creation timestamp
+    UpdatedAt  string   // Last update timestamp
+}
+
+5.6 HISTORY QUERY RESULT
+-------------------------
+Structure for returning historical changes.
+
+type HistoryQueryResult struct {
+    TxId      string    // Transaction ID
+    Timestamp time.Time // Block timestamp
+    Record    *Product  // Product state at that time
+    IsDelete  bool      // Was this a deletion?
+}
+
+================================================================================
+                     6. BUSINESS LOGIC FUNCTIONS
+================================================================================
+
+6.1 PRODUCT LIFECYCLE FUNCTIONS
+--------------------------------
+
+InitLedger()
+- Initializes ledger with sample data
+- Access: Any organization
+- Use: Network setup only
+
+CreateProduct(id, name, batch, origin, mfgDate, metaHash)
+- Creates new product in Manufactured state
+- Access: OrgManufacturerMSP ONLY
+- Validates: Product doesn't already exist
+- Sets: Owner="Manufacturer", Status="Manufactured"
+- Returns: Success or error
+
+ProductExists(id)
+- Checks if product ID exists
+- Access: Any organization
+- Returns: Boolean
+
+GetProduct(id)
+- Retrieves product by ID
+- Access: Any organization
+- Returns: Product struct or error
+
+UpdateProductStatus(id, newStatus, actor)
+- Changes product status with access control
+- Access: Varies by status transition
+- Validates: Organization authorized for this transition
+- Updates: Status, Owner, UpdatedAt timestamp
+- Returns: Success or error
+
+Status Transition Rules:
+- "Shipped": Manufacturer or Shipper
+- "InTransit": Shipper only
+- "InWarehouse": Warehouse only
+- "DeliveredToRetailer": Warehouse or Retailer
+- "Sold": Retailer only
+
+GetAllProducts()
+- Returns all products in ledger
+- Access: Any organization
+- Returns: Array of Product structs
+
+GetProductHistory(productID)
+- Returns complete history of product changes
+- Access: Any organization
+- Uses: Fabric's GetHistoryForKey
+- Returns: Array of HistoryQueryResult
+
+6.2 SHIPMENT FUNCTIONS
+----------------------
+
+ShipProduct(productID, shipperID, waybill, destination)
+- Creates shipment record for product
+- Updates product status to "Shipped"
+- Access: Shipper or Manufacturer
+- Creates: Shipment entity with key "SHIPMENT_{waybill}"
+- Returns: Success or error
+
+UpdateShipment(waybill, location, temperature)
+- Updates shipment tracking information
+- Access: OrgShipperMSP ONLY
+- Updates: Adds location to tracking array, updates temperature
+- Returns: Success or error
+
+ReceiveAtWarehouse(productID, warehouseID)
+- Marks product as received at warehouse
+- Access: OrgWarehouseMSP ONLY
+- Updates: Product status to "InWarehouse"
+- Returns: Success or error
+
+DeliverToRetailer(productID, retailerID)
+- Confirms delivery to retail location
+- Access: OrgWarehouseMSP or OrgRetailerMSP
+- Updates: Product status to "DeliveredToRetailer"
+- Returns: Success or error
+
+MarkAsSold(productID, invoiceRef)
+- Final state - product sold to customer
+- Access: OrgRetailerMSP ONLY
+- Updates: Status="Sold", Owner=invoiceRef
+- Returns: Success or error
+
+6.3 ORDER FUNCTIONS
+-------------------
+
+CreateOrder(orderID, productIDs, buyerID, sellerID, totalPrice)
+- Creates purchase order
+- Access: Any organization
+- Stores: Order entity with key "ORDER_{orderID}"
+- Returns: Success or error
+
+================================================================================
+                   7. HANDOVER APPROVAL WORKFLOW
+================================================================================
+
+Overview:
+The handover workflow implements a two-step approval process for transferring
+ownership between organizations. This ensures both parties agree to the
+transfer before it becomes final.
+
+7.1 WORKFLOW STEPS
+------------------
+
+Step 1: Request Handover
+┌─────────────────────────────────────────────────────────┐
+│ Manufacturer calls: RequestHandoverToShipper()          │
+│ - Creates Handover record with status=PENDING           │
+│ - Updates Product.PendingHandover = handoverID          │
+│ - Updates Product.Status = "HandoverRequested"          │
+│ - Emits "HandoverRequested" event                       │
+└─────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+Step 2: Accept or Reject
+┌─────────────────────────────────────────────────────────┐
+│ Option A: Shipper calls AcceptHandover()                │
+│ - Updates Handover.Status = ACCEPTED                    │
+│ - Transfers Product.Owner to Shipper                    │
+│ - Updates Product.Status = "InTransit"                  │
+│ - Clears Product.PendingHandover                        │
+│ - Adds Approval record to Product.Approvals             │
+│ - Emits "HandoverCompleted" event                       │
+│                                                          │
+│ Option B: Shipper calls RejectHandover()                │
+│ - Updates Handover.Status = REJECTED                    │
+│ - Records rejection reason                              │
+│ - Reverts Product.Owner to Manufacturer                 │
+│ - Updates Product.Status = "HandoverFailed"             │
+│ - Clears Product.PendingHandover                        │
+│ - Adds Approval record with rejection                   │
+│ - Emits "HandoverRejected" event                        │
+└─────────────────────────────────────────────────────────┘
+
+7.2 HANDOVER FUNCTIONS
+----------------------
+
+RequestHandoverToShipper(productID, shipperID, waybill, signature)
+Purpose: Manufacturer initiates transfer to shipper
+Access: OrgManufacturerMSP ONLY
+Validates:
+  - Product exists
+  - Product status is "Manufactured"
+  - Product owned by "Manufacturer"
+  - No pending handover exists
+Creates:
+  - Handover record with ID "HANDOVER-{productID}-SHIPPER"
+  - Status = PENDING
+  - Metadata includes shipperID and waybill
+Updates:
+  - Product.PendingHandover = handoverID
+  - Product.Status = "HandoverRequested"
+Emits: "HandoverRequested" event
+Returns: Success or error
+
+AcceptHandover(handoverID, receiverID, signature)
+Purpose: Receiver accepts handover and takes ownership
+Access: Target organization MSP (OrgShipperMSP/OrgWarehouseMSP/OrgRetailerMSP)
+Validates:
+  - Handover exists
+  - Handover status is PENDING
+  - Caller MSP matches handover.ToOrg
+Updates Handover:
+  - Status = ACCEPTED
+  - AcceptedAt = current timestamp
+  - AcceptedBy = caller identity (from certificate)
+  - ToSignature = provided signature
+Updates Product:
+  - Owner = handover.ToOrg
+  - CurrentHolder = handover.ToOrg
+  - Status = new status based on organization:
+    * Shipper: "InTransit"
+    * Warehouse: "InWarehouse"
+    * Retailer: "DeliveredToRetailer"
+  - PendingHandover = "" (cleared)
+  - Adds Approval record to Approvals array
+Emits: "HandoverCompleted" event
+Returns: Success or error
+
+RejectHandover(handoverID, reason, signature)
+Purpose: Receiver declines handover
+Access: Target organization MSP (OrgShipperMSP/OrgWarehouseMSP/OrgRetailerMSP)
+Validates:
+  - Handover exists
+  - Handover status is PENDING
+  - Caller MSP matches handover.ToOrg
+Updates Handover:
+  - Status = REJECTED
+  - RejectedAt = current timestamp
+  - RejectionReason = provided reason
+Updates Product:
+  - Owner = handover.FromOrg (reverted)
+  - CurrentHolder = handover.FromOrg (reverted)
+  - Status = "HandoverFailed"
+  - PendingHandover = "" (cleared)
+  - Adds Approval record with rejection details
+Emits: "HandoverRejected" event
+Returns: Success or error
+
+GetHandover(id)
+Purpose: Query handover details
+Access: Any organization
+Returns: Handover struct or error
+
+GetPendingHandoversForOrg()
+Purpose: List pending handovers for caller's organization
+Access: Any organization
+Logic:
+  - Determines caller's MSP ID
+  - Queries all handovers with prefix "HANDOVER-"
+  - Filters by ToOrg == caller's org AND Status == PENDING
+Returns: Array of Handover structs
+
+================================================================================
+                       8. SECURITY & ACCESS CONTROL
+================================================================================
+
+8.1 MULTI-LEVEL SECURITY
+-------------------------
+
+Level 1: Fabric Framework (Automatic)
+- X.509 Certificate Authentication
+- ECDSA Digital Signatures (P-256 curve, SHA-256 hash)
+- TLS for all peer-to-peer communication
+- MSP-based identity management
+- Transaction signatures validated before execution
+
+Level 2: Endorsement Policy
+- Policy: MAJORITY (3 out of 4 organizations)
+- All transactions require 3 endorsements
+- Single organization cannot manipulate data alone
+- Distributed trust model
+
+Level 3: Chaincode Access Control
+- MSP-based role validation in every function
+- Organization-specific permissions enforced
+- Helper functions: isManufacturer(), isShipper(), etc.
+
+Level 4: Application Signatures (Metadata)
+- Signature fields in Handover and Approval structs
+- Currently stored as strings (audit trail)
+- NOT cryptographically verified (Fabric handles tx signatures)
+- Purpose: Additional traceability, future enhancement
+
+8.2 ACCESS CONTROL MATRIX
+--------------------------
+
+Function                      | Manufacturer | Shipper | Warehouse | Retailer
+------------------------------|--------------|---------|-----------|----------
+CreateProduct                 | ✅           | ❌      | ❌        | ❌
+RequestHandoverToShipper      | ✅           | ❌      | ❌        | ❌
+AcceptHandover (to Shipper)   | ❌           | ✅      | ❌        | ❌
+RejectHandover (to Shipper)   | ❌           | ✅      | ❌        | ❌
+UpdateShipment                | ❌           | ✅      | ❌        | ❌
+ReceiveAtWarehouse            | ❌           | ❌      | ✅        | ❌
+DeliverToRetailer             | ❌           | ❌      | ✅        | ✅
+MarkAsSold                    | ❌           | ❌      | ❌        | ✅
+GetProduct                    | ✅           | ✅      | ✅        | ✅
+GetHandover                   | ✅           | ✅      | ✅        | ✅
+GetPendingHandoversForOrg     | ✅           | ✅      | ✅        | ✅
+GetProductHistory             | ✅           | ✅      | ✅        | ✅
+
+8.3 CRYPTOGRAPHIC MATERIALS
+----------------------------
+
+Location: network/crypto-config/
+
+Structure:
+crypto-config/
+├── ordererOrganizations/
+│   └── example.com/
+│       ├── ca/                     # Certificate Authority
+│       │   ├── ca.example.com-cert.pem
+│       │   └── priv_sk (private key)
+│       ├── msp/                    # Membership Service Provider
+│       │   ├── admincerts/
+│       │   ├── cacerts/
+│       │   └── tlscacerts/
+│       └── orderers/
+│           ├── orderer.example.com/
+│           │   ├── msp/
+│           │   │   ├── signcerts/  # Public certificate
+│           │   │   └── keystore/   # ECDSA private key
+│           │   └── tls/            # TLS certificates
+│           ├── orderer2.example.com/
+│           └── orderer3.example.com/
+└── peerOrganizations/
+    ├── manufacturer.example.com/
+    │   ├── ca/
+    │   ├── msp/
+    │   ├── peers/
+    │   │   └── peer0.manufacturer.example.com/
+    │   │       ├── msp/
+    │   │       │   ├── signcerts/
+    │   │       │   └── keystore/
+    │   │       └── tls/
+    │   └── users/
+    │       ├── Admin@manufacturer.example.com/
+    │       └── User1@manufacturer.example.com/
+    ├── shipper.example.com/
+    ├── warehouse.example.com/
+    └── retailer.example.com/
+
+Certificate Types:
+- CA Certificates: Issued by Certificate Authority
+- Signing Certificates: For transaction signing (ECDSA)
+- TLS Certificates: For secure communication
+- Admin Certificates: Administrative privileges
+
+Key Algorithms:
+- Signature: ECDSA with P-256 curve
+- Hash: SHA-256
+- TLS: TLS 1.2+
+- Certificate Format: X.509 v3
+
+8.4 VALIDATION FLOW
+--------------------
+
+1. Client submits transaction with private key signature
+2. Fabric SDK validates certificate chain
+3. Peer verifies ECDSA signature matches certificate
+4. Peer checks MSP membership
+5. Chaincode validates organization permissions
+6. Endorsing peers sign response
+7. Client collects endorsements (need 3/4)
+8. Orderer validates all signatures
+9. Block committed only if all signatures valid
+
+================================================================================
+                      9. DEPLOYMENT INFRASTRUCTURE
+================================================================================
+
+9.1 DOCKER ARCHITECTURE
+------------------------
+
+All components run in Docker containers (no local binaries).
+
+Container List (17 total):
+1. orderer.example.com          (hyperledger/fabric-orderer:2.5)
+2. orderer2.example.com         (hyperledger/fabric-orderer:2.5)
+3. orderer3.example.com         (hyperledger/fabric-orderer:2.5)
+4. peer0.manufacturer.example.com (hyperledger/fabric-peer:2.5)
+5. peer0.shipper.example.com     (hyperledger/fabric-peer:2.5)
+6. peer0.warehouse.example.com   (hyperledger/fabric-peer:2.5)
+7. peer0.retailer.example.com    (hyperledger/fabric-peer:2.5)
+8. couchdb0.manufacturer         (couchdb:3.3)
+9. couchdb0.shipper              (couchdb:3.3)
+10. couchdb0.warehouse           (couchdb:3.3)
+11. couchdb0.retailer            (couchdb:3.3)
+12. dev-peer0.manufacturer...supplychain_cc (chaincode container)
+13. dev-peer0.shipper...supplychain_cc
+14. dev-peer0.warehouse...supplychain_cc
+15. dev-peer0.retailer...supplychain_cc
+16. cli                          (hyperledger/fabric-tools:2.5)
+17. fabric-tools                 (hyperledger/fabric-tools:2.5)
+
+9.2 DEPLOYMENT SCRIPTS
+----------------------
+
+Location: network/scripts/
+
+bootstrap-docker.ps1 (Main deployment script)
+Steps:
+  1. Cleanup previous network
+  2. Generate crypto materials (cryptogen)
+  3. Generate channel artifacts (configtxgen)
+  4. Start Docker containers
+  5. Create channel
+  6. Join all peers to channel
+  7. Install chaincode on all peers
+  8. Approve chaincode for all organizations
+  9. Commit chaincode to channel
+
+generateCrypto-docker.ps1
+- Uses cryptogen tool in Docker container
+- Generates X.509 certificates and keys
+- Creates MSP structures for all organizations
+
+generateChannelArtifacts-docker.ps1
+- Uses configtxgen tool in Docker container
+- Creates genesis block for orderers
+- Creates channel transaction
+- Creates anchor peer updates
+
+createChannel-docker.ps1
+- Creates supplychain-channel
+- Joins all 4 peers to channel
+- Updates anchor peers for each organization
+
+deployChaincode-docker.ps1
+- Packages chaincode (tar.gz)
+- Installs on all peers
+- Approves for each organization
+- Commits to channel
+- Verifies deployment
+
+cleanup.ps1
+- Stops all containers
+- Removes volumes
+- Cleans up generated artifacts
+
+9.3 CONFIGURATION FILES
+-----------------------
+
+crypto-config.yaml
+- Defines crypto material structure
+- Specifies number of orderers (3)
+- Specifies organizations (4)
+- Template patterns for certificates
+
+configtx.yaml
+- Defines network configuration
+- Orderer type: etcdraft
+- Channel capabilities
+- Organization MSP definitions
+- Endorsement policies
+- Anchor peer settings
+
+docker-compose.yaml
+- Main network definition
+- Container configurations
+- Port mappings
+- Volume mounts
+- Environment variables
+- Network settings
+
+docker-compose-tools.yaml
+- CLI tools container
+- Mounted volumes for scripts
+- Access to crypto materials
+
+9.4 VOLUME MOUNTS
+-----------------
+
+Key Mounts:
+- Crypto materials: ./crypto-config → /opt/gopath/src/.../peer/crypto
+- Channel artifacts: ./channel-artifacts → /opt/gopath/src/.../peer/channel-artifacts
+- Chaincode: ../../chaincode/go → /opt/gopath/src/.../chaincode/go
+- Scripts: ./scripts → /scripts
+
+Persistent Volumes:
+- network_orderer.example.com
+- network_orderer2.example.com
+- network_orderer3.example.com
+- network_peer0.manufacturer.example.com
+- network_peer0.shipper.example.com
+- network_peer0.warehouse.example.com
+- network_peer0.retailer.example.com
+
+================================================================================
+                            10. API GATEWAY
+================================================================================
+
+Location: apps/gateway-nodejs/
+Technology: Node.js 16 + Express + Fabric SDK 2.2
+
+10.1 STRUCTURE
+--------------
+
+apps/gateway-nodejs/
+├── src/
+│   ├── index.js                    # Main Express server
+│   ├── middleware/
+│   │   └── errorHandler.js         # Global error handling
+│   ├── routes/
+│   │   ├── products.js             # Product CRUD endpoints
+│   │   ├── handovers.js            # Handover workflow endpoints
+│   │   ├── shipments.js            # Shipment tracking
+│   │   └── orders.js               # Order management
+│   ├── utils/
+│   │   └── fabricClient.js         # Fabric SDK wrapper
+│   └── wallet/                     # User identities
+│       └── appUser.id              # Enrolled user certificate
+├── scripts/
+│   ├── enrollAdmin.js              # Enroll admin user
+│   ├── registerUser.js             # Register application user
+│   └── importIdentity.js           # Import existing identity
+├── tests/
+│   ├── unit/                       # Unit tests (Jest)
+│   └── integration/                # Integration tests (planned)
+├── package.json
+└── logs/
+
+10.2 API ENDPOINTS
+------------------
+
+Products:
+POST   /api/products                    # Create product
+GET    /api/products/:id                # Get product
+GET    /api/products                    # List all products
+GET    /api/products/:id/history        # Get history
+PUT    /api/products/:id/status         # Update status
+
+Handovers:
+POST   /api/handovers/request-shipper   # Request handover to shipper
+POST   /api/handovers/:id/accept        # Accept handover
+POST   /api/handovers/:id/reject        # Reject handover
+GET    /api/handovers/:id               # Get handover details
+GET    /api/handovers/pending           # List pending handovers
+
+Shipments:
+POST   /api/shipments                   # Create shipment
+GET    /api/shipments/:waybill          # Get shipment
+PUT    /api/shipments/:waybill          # Update tracking
+
+Orders:
+POST   /api/orders                      # Create order
+GET    /api/orders/:id                  # Get order
+
+10.3 FABRIC SDK INTEGRATION
+----------------------------
+
+fabricClient.js provides:
+- Connection to Fabric network
+- Identity management (wallet)
+- Transaction submission
+- Query execution
+- Event listening
+
+Connection Profile: network/connection-manufacturer.json
+Defines:
+- Peer endpoints
+- Orderer endpoints
+- CA endpoints
+- TLS certificates
+
+10.4 IDENTITY MANAGEMENT
+------------------------
+
+Wallet Storage: apps/gateway-nodejs/wallet/
+Identity Format: X.509 certificate + private key
+
+Enrollment Process:
+1. Run enrollAdmin.js → Creates admin identity
+2. Run registerUser.js → Registers app user with CA
+3. Identity stored in wallet as appUser.id
+4. API uses this identity for all transactions
+
+================================================================================
+                        11. OFF-CHAIN DATABASE
+================================================================================
+
+Location: offchain/postgres/
+Technology: PostgreSQL 15
+Purpose: Metadata storage, search indexing, notifications
+
+11.1 SCHEMA
+-----------
+
+Schema File: offchain/postgres/schema.sql
+
+Tables:
+
+products (metadata)
+- id VARCHAR(50) PRIMARY KEY
+- name VARCHAR(200)
+- batch VARCHAR(100)
+- origin VARCHAR(200)
+- manufacture_date DATE
+- current_status VARCHAR(50)
+- owner VARCHAR(100)
+- meta_hash VARCHAR(100)
+- created_at TIMESTAMP
+- updated_at TIMESTAMP
+- INDEX: idx_products_status
+- INDEX: idx_products_batch
+
+pending_handovers
+- id VARCHAR(100) PRIMARY KEY
+- product_id VARCHAR(50) REFERENCES products(id)
+- from_org VARCHAR(50)
+- to_org VARCHAR(50)
+- requester_signature TEXT
+- waybill VARCHAR(100)
+- status VARCHAR(20)
+- requested_at TIMESTAMP
+- INDEX: idx_pending_handovers_status
+- INDEX: idx_pending_handovers_product
+
+handover_approvals
+- id SERIAL PRIMARY KEY
+- handover_id VARCHAR(100)
+- approver_org VARCHAR(50)
+- approver_id VARCHAR(50)
+- signature TEXT
+- action VARCHAR(20)
+- approved_at TIMESTAMP
+- INDEX: idx_handover_approvals_handover
+
+shipments
+- waybill VARCHAR(100) PRIMARY KEY
+- product_id VARCHAR(50) REFERENCES products(id)
+- shipper_id VARCHAR(100)
+- origin VARCHAR(200)
+- destination VARCHAR(200)
+- status VARCHAR(50)
+- temperature DECIMAL(5,2)
+- created_at TIMESTAMP
+- updated_at TIMESTAMP
+
+shipment_locations
+- id SERIAL PRIMARY KEY
+- waybill VARCHAR(100) REFERENCES shipments(waybill)
+- location VARCHAR(200)
+- timestamp TIMESTAMP
+- INDEX: idx_shipment_locations_waybill
+
+orders
+- id VARCHAR(100) PRIMARY KEY
+- buyer_id VARCHAR(100)
+- seller_id VARCHAR(100)
+- status VARCHAR(50)
+- total_price DECIMAL(12,2)
+- created_at TIMESTAMP
+- updated_at TIMESTAMP
+
+order_items
+- id SERIAL PRIMARY KEY
+- order_id VARCHAR(100) REFERENCES orders(id)
+- product_id VARCHAR(50) REFERENCES products(id)
+- quantity INT
+- price DECIMAL(12,2)
+
+notifications
+- id SERIAL PRIMARY KEY
+- organization VARCHAR(50)
+- type VARCHAR(50)
+- message TEXT
+- reference_id VARCHAR(100)
+- is_read BOOLEAN DEFAULT FALSE
+- created_at TIMESTAMP
+- INDEX: idx_notifications_org
+- INDEX: idx_notifications_read
+
+11.2 SYNC STRATEGY (Planned)
+-----------------------------
+
+Block Event Listener:
+- Subscribe to Fabric block events
+- Parse transactions
+- Extract relevant data
+- Insert/update PostgreSQL tables
+- Enable fast queries without blockchain access
+
+Benefits:
+- Fast search and filtering
+- Complex queries (JOINs, aggregations)
+- Pagination support
+- Notification system
+- Analytics and reporting
+
+Status: Infrastructure ready, listener implementation pending
+
+================================================================================
+                         12. TESTING FRAMEWORK
+================================================================================
+
+12.1 GO UNIT TESTS
+------------------
+
+Location: chaincode/go/supplychain_simple_test.go
+Framework: github.com/stretchr/testify
+Tests: 13 passing, 1 skipped
+
+Test Coverage:
+✅ TestProductCreation - Product struct initialization
+✅ TestShipmentCreation - Shipment struct initialization
+✅ TestOrderCreation - Order struct initialization
+✅ TestProductStatusTransitions - Valid status changes
+✅ TestShipmentStatusValidation - Shipment status rules
+✅ TestTemperatureValidation - Temperature tracking
+✅ TestLocationTracking - GPS location array
+✅ TestOrderAmountCalculation - Price calculations
+✅ TestProductIDFormat - ID validation
+✅ TestBatchNumberValidation - Batch format
+✅ TestOriginValidation - Origin field
+✅ TestWaybillFormat - Waybill number format
+✅ TestSmartContractCreation - Contract instantiation
+⏸️ TestIntegrationMarker - Placeholder for Week 5-6
+
+Run: docker exec fabric-tools bash -c "cd /opt/gopath/src/.../chaincode/go && go test -v"
+
+12.2 INTEGRATION TESTS
+----------------------
+
+Location: network/scripts/
+Tests: Bash scripts for end-to-end workflow
+
+test-quick.sh (Handover Workflow)
+Steps:
+1. Create product by Manufacturer
+2. Request handover to Shipper
+3. Shipper accepts handover
+4. Query product to verify ownership transfer
+
+Results:
+✅ CreateProduct: status:200
+✅ RequestHandoverToShipper: status:200
+✅ AcceptHandover: status:200
+⚠️ GetProduct: Schema warning (non-critical)
+
+test-chaincode-unit.sh
+- Runs Go unit tests in container
+- Reports coverage metrics
+
+test-handover-workflow.sh (Comprehensive)
+- Tests acceptance flow
+- Tests rejection flow
+- Verifies state changes
+
+12.3 API TESTS (Pending)
+-------------------------
+
+Location: apps/gateway-nodejs/tests/
+Framework: Jest + Supertest
+Status: Test files created, mocks need fixes
+
+Planned Coverage:
+- Unit tests for routes
+- Integration tests with test network
+- Mock Fabric SDK for fast unit tests
+- Coverage target: 75%
+
+Known Issues:
+- fabricClient mock returns undefined
+- Need __mocks__/fabricClient.js implementation
+
+12.4 TEST REPORTS
+-----------------
+
+Latest Test Run: November 12, 2025, 11:20 PM GMT+7
+
+Results Summary:
+- Network Bootstrap: ✅ PASSED
+- Channel Creation: ✅ PASSED
+- Chaincode Deployment: ✅ PASSED
+- Handover Workflow: ✅ 3/3 transactions successful
+- Unit Tests: ✅ 13/13 passed
+- Overall Status: ✅ ALL TESTS PASSING
+
+Test Artifacts:
+- TEST_RESULTS_NOV12_2025.md (comprehensive report)
+- HANDOVER_WORKFLOW_VERIFICATION.md (detailed analysis)
+- QUICK_TEST_GUIDE.md (how-to guide)
+
+================================================================================
+                      13. MONITORING & OPERATIONS
+================================================================================
+
+13.1 MONITORING STACK
+---------------------
+
+Location: ci-cd/monitoring/
+
+Components:
+- Prometheus: Metrics collection
+- Grafana: Visualization dashboards
+- Alertmanager: Alert routing (configured)
+
+Prometheus Config: ci-cd/monitoring/prometheus.yml
+Targets:
+- Orderer metrics: orderer.example.com:9443
+- Orderer 2 metrics: orderer2.example.com:9444
+- Orderer 3 metrics: orderer3.example.com:9445
+- Manufacturer peer: peer0.manufacturer.example.com:9443
+- Shipper peer: peer0.shipper.example.com:9444
+- Warehouse peer: peer0.warehouse.example.com:9445
+- Retailer peer: peer0.retailer.example.com:9446
+
+Metrics Collected:
+- Block creation rate
+- Transaction throughput
+- Endorsement latency
+- Ledger height
+- CPU/memory usage
+- Network I/O
+
+Alerts: ci-cd/monitoring/alerts.yml
+- High transaction failure rate
+- Peer down
+- Orderer cluster unhealthy
+- High endorsement latency
+
+13.2 LOGGING
+------------
+
+Container Logs:
+docker logs <container_name>
+
+Key Log Locations:
+- Orderer logs: docker logs orderer.example.com
+- Peer logs: docker logs peer0.manufacturer.example.com
+- Chaincode logs: docker logs dev-peer0...supplychain_cc
+- API logs: apps/gateway-nodejs/logs/
+
+Log Levels:
+- INFO: Normal operations
+- WARN: Non-critical issues
+- ERROR: Failures requiring attention
+- DEBUG: Detailed troubleshooting (disabled in production)
+
+13.3 OPERATIONAL COMMANDS
+--------------------------
+
+Network Status:
+docker ps                           # List running containers
+docker exec fabric-tools peer version  # Check Fabric version
+
+Channel Info:
+docker exec fabric-tools peer channel list
+docker exec fabric-tools peer channel getinfo -C supplychain-channel
+
+Chaincode Status:
+docker exec fabric-tools peer lifecycle chaincode queryinstalled
+docker exec fabric-tools peer lifecycle chaincode querycommitted -C supplychain-channel -n supplychain_cc
+
+Query Blockchain:
+docker exec fabric-tools peer chaincode query -C supplychain-channel -n supplychain_cc -c '{"function":"GetProduct","Args":["PROD001"]}'
+
+Invoke Transaction:
+docker exec fabric-tools peer chaincode invoke -o orderer.example.com:7050 \
+  -C supplychain-channel -n supplychain_cc \
+  --tls --cafile /opt/.../tlsca.example.com-cert.pem \
+  --peerAddresses peer0.manufacturer.example.com:7051 \
+  --peerAddresses peer0.shipper.example.com:8051 \
+  --peerAddresses peer0.warehouse.example.com:9051 \
+  -c '{"function":"CreateProduct","Args":[...]}'
+
+13.4 BACKUP & RECOVERY
+----------------------
+
+Critical Data to Backup:
+1. Crypto materials: network/crypto-config/
+2. Channel artifacts: network/channel-artifacts/
+3. Chaincode source: chaincode/go/
+4. Configuration files: network/*.yaml
+5. PostgreSQL database: pg_dump
+6. API wallet: apps/gateway-nodejs/wallet/
+
+Disaster Recovery:
+1. Restore crypto materials
+2. Restore configuration files
+3. Run bootstrap-docker.ps1
+4. Restore PostgreSQL database
+5. Restore API wallet
+6. Verify network connectivity
+
+Ledger Recovery:
+- Blockchain data is immutable
+- Each peer has complete ledger copy
+- Orderers maintain Raft log
+- If peer fails, rejoin channel to sync
+- If all peers fail, recover from snapshot + Raft log
+
+================================================================================
+                          14. FILE STRUCTURE
+================================================================================
+
+e:\server_ship\blockchainCore/
+│
+├── .github/
+│   └── copilot-instructions.md       # AI coding agent guide (308 lines)
+│
+├── apps/
+│   └── gateway-nodejs/               # REST API Gateway
+│       ├── src/
+│       │   ├── index.js             # Express server
+│       │   ├── middleware/
+│       │   ├── routes/              # 5 route files
+│       │   ├── utils/
+│       │   └── wallet/              # Fabric identities
+│       ├── tests/
+│       ├── package.json
+│       └── coverage/                # Test coverage reports
+│
+├── chaincode/
+│   └── go/
+│       ├── supplychain.go           # Main chaincode (907 lines)
+│       ├── supplychain_simple_test.go # Unit tests
+│       ├── go.mod                   # Go dependencies
+│       └── go.sum                   # Dependency checksums
+│
+├── network/
+│   ├── docker-compose.yaml          # Main network containers
+│   ├── docker-compose-tools.yaml    # CLI tools container
+│   ├── crypto-config.yaml           # Crypto generation config
+│   ├── configtx.yaml                # Network configuration
+│   ├── connection-manufacturer.json # SDK connection profile
+│   ├── crypto-config/               # Generated certificates
+│   ├── channel-artifacts/           # Generated channel files
+│   └── scripts/
+│       ├── bootstrap-docker.ps1     # Main deployment (✅ PRIMARY)
+│       ├── generateCrypto-docker.ps1
+│       ├── createChannel-docker.ps1
+│       ├── deployChaincode-docker.ps1
+│       ├── cleanup.ps1
+│       ├── test-chaincode.sh
+│       ├── test-handover.ps1
+│       └── smokeTest-docker.ps1
+│
+├── offchain/
+│   └── postgres/
+│       ├── docker-compose.yaml      # PostgreSQL container
+│       └── schema.sql               # Database schema
+│
+├── ci-cd/
+│   └── monitoring/
+│       ├── docker-compose.yaml      # Prometheus + Grafana
+│       ├── prometheus.yml           # Metrics config
+│       └── alerts.yml               # Alert rules
+│
+├── docs/
+│   ├── design.md                    # Architecture design
+│   ├── deployment.md                # Deployment guide
+│   ├── runbook.md                   # Operations manual
+│   ├── API_EXAMPLES.md              # API usage examples
+│   └── testing/
+│       ├── TESTING_PLAN.md
+│       ├── TESTING_STATUS.md
+│       └── TESTING_SUCCESS_DAY1.md
+│
+├── .gitignore                       # Git ignore rules
+├── README.md                        # Project overview
+├── QUICKSTART.md                    # 10-minute tutorial
+├── PROJECT_SUMMARY.md               # Feature summary
+├── DOCKER_MIGRATION_SUMMARY.md      # Docker-only migration notes
+├── DEPLOYMENT_SUCCESS.md            # Deployment verification
+├── DIGITAL_SIGNATURE_ANALYSIS.md    # Security analysis
+├── TEST_RESULTS_NOV12_2025.md      # Latest test results
+├── HANDOVER_WORKFLOW_VERIFICATION.md # Workflow verification
+├── QUICK_TEST_GUIDE.md             # Quick testing guide
+├── setup.ps1                       # One-command setup
+└── test-quick.sh                   # Quick workflow test
+
+Total Files: ~150+
+Total Lines of Code: ~15,000+
+Documentation: ~10,000+ lines
+
+================================================================================
+                         15. DEPLOYMENT STATUS
+================================================================================
+
+Current Environment: Development (Local Docker)
+Network Status: ✅ OPERATIONAL
+Chaincode Status: ✅ COMMITTED (Sequence 1)
+Test Status: ✅ ALL PASSING
+
+Container Health:
+✅ orderer.example.com         - Up 2+ hours
+✅ orderer2.example.com        - Up 2+ hours
+✅ orderer3.example.com        - Up 2+ hours
+✅ peer0.manufacturer          - Up 2+ hours
+✅ peer0.shipper               - Up 2+ hours
+✅ peer0.warehouse             - Up 2+ hours
+✅ peer0.retailer              - Up 2+ hours
+✅ couchdb0.manufacturer       - Up 2+ hours
+✅ couchdb0.shipper            - Up 2+ hours
+✅ couchdb0.warehouse          - Up 2+ hours
+✅ couchdb0.retailer           - Up 2+ hours
+✅ cli                         - Up 2+ hours
+✅ fabric-tools                - Up 2+ hours
+
+Chaincode Details:
+Name: supplychain_cc
+Version: 1.0
+Sequence: 1
+Package ID: supplychain_cc_1.0:a9151403ffc32d6ce09a3a31799d23f6bc3d5688c26a93b4017d3714c884e258
+Status: Committed
+Approvals: 4/4 organizations
+Endorsement Policy: MAJORITY (3 out of 4)
+
+Channel Details:
+Name: supplychain-channel
+Members: 4 organizations
+Block Height: ~50+ blocks (from testing)
+Anchor Peers: 4 (one per org)
+
+Latest Transactions (from testing):
+1. CreateProduct (TEST-PROD-999) - status:200 ✅
+2. RequestHandoverToShipper - status:200 ✅
+3. AcceptHandover - status:200 ✅
+
+Performance Metrics (from tests):
+- Transaction Time: ~3 seconds average
+- Block Creation: ~2 seconds
+- Endorsement: <1 second
+- Network Startup: ~30 seconds
+- Chaincode Install: ~180 seconds (3 minutes for 4 peers)
+
+Known Issues:
+⚠️ Schema validation warning in GetProduct query (non-critical, data correct)
+⚠️ API test mocks need fixing (fabricClient mock undefined)
+
+Production Readiness:
+✅ Network architecture: Production-grade Raft consensus
+✅ Security: X.509 + ECDSA signatures active
+✅ Access control: MSP-based enforcement working
+✅ Endorsement policy: MAJORITY (3/4) enforced
+✅ Handover workflow: Verified end-to-end
+✅ Unit tests: 13/13 passing
+✅ Integration tests: 3/3 transactions successful
+✅ Monitoring: Prometheus + Grafana configured
+⏸️ Event listener: Infrastructure ready, implementation pending
+⏸️ API tests: Need mock fixes
+⏸️ Load testing: Not performed yet
+
+================================================================================
+                            16. NEXT STEPS
+================================================================================
+
+IMMEDIATE (Week 1-2):
+1. Fix schema validation warning
+   - Update contract metadata for optional fields
+   - Mark pendingHandover as optional in chaincode
+   
+2. Fix API test mocks
+   - Create __mocks__/fabricClient.js
+   - Implement mock methods
+   - Run npm test successfully
+
+3. Implement block event listener
+   - Subscribe to chaincode events
+   - Parse transactions
+   - Sync to PostgreSQL
+   - Enable notifications
+
+SHORT-TERM (Week 3-4):
+4. Complete API integration
+   - Test all endpoints with live network
+   - Add authentication/authorization
+   - Implement rate limiting
+   
+5. Add more handover functions
+   - RequestHandoverToWarehouse
+   - RequestHandoverToRetailer
+   - CancelHandover (before acceptance)
+   - GetHandoverHistory
+
+6. Performance testing
+   - Load testing with concurrent users
+   - Transaction throughput benchmarks
+   - Latency measurements
+   - Stress testing
+
+MEDIUM-TERM (Month 2):
+7. Production deployment preparation
+   - TLS certificate management
+   - Key rotation procedures
+   - Backup/restore procedures
+   - Disaster recovery plan
+   
+8. Monitoring enhancements
+   - Custom Grafana dashboards
+   - Alert notification integration (Slack/Email)
+   - SLA monitoring
+   - Performance baselines
+
+9. Advanced features
+   - Multi-channel support
+   - Private data collections
+   - Chaincode upgrades (sequence 2+)
+   - Smart contract versioning
+
+LONG-TERM (Month 3+):
+10. Scale-out
+    - Add more peers per organization
+    - Multi-region deployment
+    - CDN integration for API
+    - Database replication
+
+11. Enhanced security
+    - Implement cryptographic signature verification
+    - Key management system (KMS)
+    - Hardware Security Module (HSM) integration
+    - Audit log encryption
+
+12. Business features
+    - IoT sensor integration
+    - QR code generation/scanning
+    - Mobile app development
+    - Customer portal
+    - Analytics dashboard
+
+================================================================================
+                              END OF DOCUMENT
+================================================================================
+
+Document Version: 1.0
+Last Updated: November 13, 2025
+Status: Complete
+Pages: ~450 lines (equivalent to ~18 printed pages)
+Word Count: ~8,000 words
+
+For Questions or Support:
+- GitHub: eja-edo/FarmTrace
+- Branch: blockchainCore/dev
+- Documentation: See docs/ folder
+- Quick Start: QUICKSTART.md
+- Test Results: TEST_RESULTS_NOV12_2025.md
+
+================================================================================

@@ -39,6 +39,7 @@ try {
 
 Write-Host ""
 Write-Host ">>> Step 1/6: Bootstrapping Fabric network (Docker-only)..." -ForegroundColor Yellow
+$ROOT_DIR = $PWD
 Set-Location network\scripts
 .\bootstrap-docker.ps1
 
@@ -49,7 +50,8 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 Write-Host ">>> Step 2/6: Starting PostgreSQL database..." -ForegroundColor Yellow
-Set-Location ..\..\offchain\postgres
+Set-Location $ROOT_DIR
+Set-Location offchain\postgres
 docker-compose up -d
 
 if ($LASTEXITCODE -ne 0) {
@@ -63,7 +65,8 @@ Write-Host "OK Database started" -ForegroundColor Green
 
 Write-Host ""
 Write-Host ">>> Step 3/6: Installing API dependencies..." -ForegroundColor Yellow
-Set-Location ..\..\apps\gateway-nodejs
+Set-Location $ROOT_DIR
+Set-Location apps\gateway-nodejs
 
 if (-not (Test-Path ".env")) {
     Write-Host "Creating .env file..."
@@ -94,7 +97,8 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 Write-Host ">>> Step 6/6: Running smoke tests..." -ForegroundColor Yellow
-Set-Location ..\..\network\scripts
+Set-Location $ROOT_DIR
+Set-Location network\scripts
 .\smokeTest-docker.ps1
 
 Write-Host ""
