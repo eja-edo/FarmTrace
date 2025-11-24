@@ -20,74 +20,74 @@ import HandoverDetail from './pages/handovers/HandoverDetail'
 
 // Protected route wrapper
 const ProtectedRoute = ({ children, allowedOrgs }) => {
-  const { selectedOrg } = useOrgStore()
-  
-  if (!selectedOrg) {
-    return <Navigate to="/auth/select-org" replace />
-  }
-  
-  if (allowedOrgs && !allowedOrgs.includes(selectedOrg)) {
-    return <Navigate to="/" replace />
-  }
-  
-  return children
+    const { selectedOrg } = useOrgStore()
+
+    if (!selectedOrg) {
+        return <Navigate to="/auth/select-org" replace />
+    }
+
+    if (allowedOrgs && !allowedOrgs.includes(selectedOrg)) {
+        return <Navigate to="/" replace />
+    }
+
+    return children
 }
 
 function App() {
-  const { selectedOrg } = useOrgStore()
+    const { selectedOrg } = useOrgStore()
 
-  return (
-    <Routes>
-      {/* Auth routes */}
-      <Route path="/auth" element={<AuthLayout />}>
-        <Route path="select-org" element={<SelectOrganization />} />
-      </Route>
+    return (
+        <Routes>
+            {/* Auth routes */}
+            <Route path="/auth" element={<AuthLayout />}>
+                <Route path="select-org" element={<SelectOrganization />} />
+            </Route>
 
-      {/* Protected main routes */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      >
-        {/* Dashboard routes based on organization */}
-        <Route
-          index
-          element={
-            selectedOrg === 'manufacturer' ? (
-              <ManufacturerDashboard />
-            ) : selectedOrg === 'shipper' ? (
-              <ShipperDashboard />
-            ) : selectedOrg === 'warehouse' ? (
-              <WarehouseDashboard />
-            ) : selectedOrg === 'retailer' ? (
-              <RetailerDashboard />
-            ) : (
-              <Navigate to="/auth/select-org" replace />
-            )
-          }
-        />
+            {/* Protected main routes */}
+            <Route
+                path="/"
+                element={
+                    <ProtectedRoute>
+                        <MainLayout />
+                    </ProtectedRoute>
+                }
+            >
+                {/* Dashboard routes based on organization */}
+                <Route
+                    index
+                    element={
+                        selectedOrg === 'manufacturer' ? (
+                            <ManufacturerDashboard />
+                        ) : selectedOrg === 'shipper' ? (
+                            <ShipperDashboard />
+                        ) : selectedOrg === 'warehouse' ? (
+                            <WarehouseDashboard />
+                        ) : selectedOrg === 'retailer' ? (
+                            <RetailerDashboard />
+                        ) : (
+                            <Navigate to="/auth/select-org" replace />
+                        )
+                    }
+                />
 
-        {/* Product routes */}
-        <Route path="products">
-          <Route index element={<ProductList />} />
-          <Route path="create" element={<CreateProduct />} />
-          <Route path=":productId" element={<ProductDetail />} />
-        </Route>
+                {/* Product routes */}
+                <Route path="products">
+                    <Route index element={<ProductList />} />
+                    <Route path="create" element={<CreateProduct />} />
+                    <Route path=":productId" element={<ProductDetail />} />
+                </Route>
 
-        {/* Handover routes */}
-        <Route path="handovers">
-          <Route index element={<HandoverList />} />
-          <Route path=":handoverId" element={<HandoverDetail />} />
-        </Route>
-      </Route>
+                {/* Handover routes */}
+                <Route path="handovers">
+                    <Route index element={<HandoverList />} />
+                    <Route path=":handoverId" element={<HandoverDetail />} />
+                </Route>
+            </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  )
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+    )
 }
 
 export default App
