@@ -9,22 +9,28 @@ export const useOrgStore = create(
             orgName: null,
 
             setOrg: (org) => {
-                const orgMap = {
+                const orgLabelMap = {
                     manufacturer: 'Manufacturer',
                     shipper: 'Shipper',
                     warehouse: 'Warehouse',
                     retailer: 'Retailer',
                 }
+                const label = orgLabelMap[org] || org
+
                 set({
                     selectedOrg: org,
-                    orgName: orgMap[org] || org
+                    orgName: label
                 })
-                localStorage.setItem('selectedOrg', orgMap[org] || org)
+
+                // Persist both the canonical org slug (used for headers) and the display label
+                localStorage.setItem('selectedOrg', org)
+                localStorage.setItem('orgLabel', label)
             },
 
             clearOrg: () => {
                 set({ selectedOrg: null, orgName: null })
                 localStorage.removeItem('selectedOrg')
+                localStorage.removeItem('orgLabel')
             },
 
             isOrg: (org) => get().selectedOrg === org,

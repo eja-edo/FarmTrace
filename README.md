@@ -20,14 +20,18 @@ blockchainCore/
 │   ├── crypto-config.yaml
 │   └── configtx.yaml
 ├── chaincode/            # Smart contracts
-│   ├── go/               # Go chaincode
-│   └── lifecycle/        # Packaging scripts
+│   └── go/               # Go chaincode (supplychain.go)
 ├── apps/                 # Application layer
-│   ├── gateway-nodejs/   # REST API Gateway
-│   └── scripts/          # Test clients
+│   └── gateway-nodejs/   # REST API Gateway
 ├── offchain/             # Off-chain storage
-│   ├── postgres/         # Database schema
-│   └── ipfs/             # File storage (optional)
+│   └── postgres/         # Database schema
+├── tests/                # ⭐ Test suite (organized)
+│   ├── integration/      # End-to-end tests
+│   ├── monitoring/       # Stability checks
+│   ├── unit/             # Go unit tests
+│   ├── run-tests.ps1     # PowerShell test runner
+│   ├── run-tests.sh      # Bash test runner
+│   └── README.md         # Test documentation
 ├── docs/                 # Documentation
 │   ├── design.md
 │   ├── deployment.md
@@ -102,13 +106,37 @@ npm start
 
 ## Testing
 
-```powershell
-# Integration tests
-npm run test:integration
+**Organized test suite** - See `tests/README.md` for detailed documentation
 
-# Smoke tests
-.\network\scripts\smokeTest.ps1
+### Quick Test Commands
+
+```powershell
+# Run all tests (recommended)
+.\tests\run-tests.ps1 all
+
+# Quick smoke test (10 seconds)
+.\tests\run-tests.ps1 smoke
+
+# Comprehensive workflow test (60 seconds)
+.\tests\run-tests.ps1 comprehensive
+
+# Container stability monitoring (5 minutes)
+.\tests\run-tests.ps1 monitoring
+
+# Go unit tests (1 second)
+.\tests\run-tests.ps1 unit
 ```
+
+### Test Coverage
+
+✅ **13/13 comprehensive tests passing**
+- Product lifecycle (create → handover → ship → warehouse)
+- Ownership transfers with 2-party approval
+- MSP-based access control validation
+- Audit trail verification (6 transactions)
+- Query filters and performance
+
+See `BLOCKCHAIN_CORE_READINESS_REPORT.md` for full test results.
 
 ## Monitoring
 

@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  gateway-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gateway-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - LOG_LEVEL=info
+      - CHANNEL_NAME=supplychain-channel
+      - CHAINCODE_NAME=supplychain_cc
+      - DOCKER_ENV=true
+      - GATEWAY_DISCOVERY_ENABLED=false
+    volumes:
+      # Mount network config and crypto materials
+      - ../../network/connection-manufacturer-docker.json:/app/connection-profile.json:ro
+      - ../../network/crypto-config:/crypto-config:ro
+      # Mount wallet (persistent storage)
+      - ./wallet:/app/wallet
+      # Mount logs
+      - ./logs:/app/logs
+    networks:
+      - fabric_supplychain
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # PostgreSQL already running separately
+    # depends_on:
+    #   - postgres
+
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: supply-chain-db
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     - POSTGRES_USER=supplychain
+  #     - POSTGRES_PASSWORD=supplychain123
+  #     - POSTGRES_DB=supplychain
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #     - ../../offchain/postgres/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+  #   networks:
+  #     - fabric_supplychain
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U supplychain"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+networks:
+  fabric_supplychain:
+    external: true
+
+volumes:
+  postgres-data:
+    driver: local

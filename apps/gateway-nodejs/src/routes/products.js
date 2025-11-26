@@ -60,7 +60,7 @@ router.post('/',
             res.status(201).json({
                 success: true,
                 message: 'Product created successfully',
-                data: JSON.parse(result)
+                data: result && result.trim() !== '' ? JSON.parse(result) : {}
             });
         } catch (error) {
             logger.error('Error creating product:', error);
@@ -93,7 +93,13 @@ router.get('/:id',
                 id
             );
 
-            const product = JSON.parse(result);
+            const product = result && result.trim() !== '' ? JSON.parse(result) : null;
+            if (!product) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Product not found'
+                });
+            }
 
             // Get additional metadata from database
             const dbResult = await db.query(
@@ -140,7 +146,7 @@ router.get('/:id/history',
                 id
             );
 
-            const history = JSON.parse(result);
+            const history = result && result.trim() !== '' ? JSON.parse(result) : [];
 
             res.status(200).json({
                 success: true,
@@ -170,7 +176,8 @@ router.get('/', async (req, res) => {
             'GetAllProducts'
         );
 
-        const products = JSON.parse(result);
+        // Handle empty result
+        const products = result && result.trim() !== '' ? JSON.parse(result) : [];
 
         res.status(200).json({
             success: true,

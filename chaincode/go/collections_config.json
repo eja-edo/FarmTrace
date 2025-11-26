@@ -1,0 +1,38 @@
+[
+  {
+    "name": "priceData",
+    "policy": "OR('OrgManufacturerMSP.member', 'OrgRetailerMSP.member')",
+    "requiredPeerCount": 1,
+    "maxPeerCount": 2,
+    "blockToLive": 1000,
+    "memberOnlyRead": true,
+    "memberOnlyWrite": true,
+    "endorsementPolicy": {
+      "signaturePolicy": "OR('OrgManufacturerMSP.peer', 'OrgRetailerMSP.peer')"
+    }
+  },
+  {
+    "name": "shipmentDetails",
+    "policy": "OR('OrgShipperMSP.member', 'OrgWarehouseMSP.member')",
+    "requiredPeerCount": 1,
+    "maxPeerCount": 2,
+    "blockToLive": 500,
+    "memberOnlyRead": true,
+    "memberOnlyWrite": true,
+    "endorsementPolicy": {
+      "signaturePolicy": "OR('OrgShipperMSP.peer', 'OrgWarehouseMSP.peer')"
+    }
+  },
+  {
+    "name": "handoverSignatures",
+    "policy": "OR('OrgManufacturerMSP.member', 'OrgShipperMSP.member', 'OrgWarehouseMSP.member', 'OrgRetailerMSP.member')",
+    "requiredPeerCount": 0,
+    "maxPeerCount": 3,
+    "blockToLive": 0,
+    "memberOnlyRead": true,
+    "memberOnlyWrite": true,
+    "endorsementPolicy": {
+      "signaturePolicy": "OR('OrgManufacturerMSP.peer', 'OrgShipperMSP.peer', 'OrgWarehouseMSP.peer', 'OrgRetailerMSP.peer')"
+    }
+  }
+]

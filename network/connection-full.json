@@ -1,0 +1,143 @@
+{
+    "name": "supply-chain-network",
+    "version": "1.0.0",
+    "client": {
+        "organization": "OrgManufacturer",
+        "connection": {
+            "timeout": {
+                "peer": {
+                    "endorser": "300"
+                },
+                "orderer": "300"
+            }
+        }
+    },
+    "organizations": {
+        "OrgManufacturer": {
+            "mspid": "OrgManufacturerMSP",
+            "peers": [
+                "peer0.manufacturer.example.com"
+            ],
+            "certificateAuthorities": [
+                "ca.manufacturer.example.com"
+            ]
+        },
+        "OrgShipper": {
+            "mspid": "OrgShipperMSP",
+            "peers": [
+                "peer0.shipper.example.com"
+            ]
+        },
+        "OrgWarehouse": {
+            "mspid": "OrgWarehouseMSP",
+            "peers": [
+                "peer0.warehouse.example.com"
+            ]
+        },
+        "OrgRetailer": {
+            "mspid": "OrgRetailerMSP",
+            "peers": [
+                "peer0.retailer.example.com"
+            ]
+        }
+    },
+    "peers": {
+        "peer0.manufacturer.example.com": {
+            "url": "grpcs://localhost:7051",
+            "tlsCACerts": {
+                "path": "E:\\server_ship\\blockchainCore\\network\\crypto-config\\peerOrganizations\\manufacturer.example.com\\peers\\peer0.manufacturer.example.com\\tls\\ca.crt"
+            },
+            "grpcOptions": {
+                "ssl-target-name-override": "peer0.manufacturer.example.com",
+                "hostnameOverride": "peer0.manufacturer.example.com"
+            }
+        },
+        "peer0.shipper.example.com": {
+            "url": "grpcs://localhost:8051",
+            "tlsCACerts": {
+                "path": "E:\\server_ship\\blockchainCore\\network\\crypto-config\\peerOrganizations\\shipper.example.com\\peers\\peer0.shipper.example.com\\tls\\ca.crt"
+            },
+            "grpcOptions": {
+                "ssl-target-name-override": "peer0.shipper.example.com",
+                "hostnameOverride": "peer0.shipper.example.com"
+            }
+        },
+        "peer0.warehouse.example.com": {
+            "url": "grpcs://localhost:9051",
+            "tlsCACerts": {
+                "path": "E:\\server_ship\\blockchainCore\\network\\crypto-config\\peerOrganizations\\warehouse.example.com\\peers\\peer0.warehouse.example.com\\tls\\ca.crt"
+            },
+            "grpcOptions": {
+                "ssl-target-name-override": "peer0.warehouse.example.com",
+                "hostnameOverride": "peer0.warehouse.example.com"
+            }
+        },
+        "peer0.retailer.example.com": {
+            "url": "grpcs://localhost:10051",
+            "tlsCACerts": {
+                "path": "E:\\server_ship\\blockchainCore\\network\\crypto-config\\peerOrganizations\\retailer.example.com\\peers\\peer0.retailer.example.com\\tls\\ca.crt"
+            },
+            "grpcOptions": {
+                "ssl-target-name-override": "peer0.retailer.example.com",
+                "hostnameOverride": "peer0.retailer.example.com"
+            }
+        }
+    },
+    "orderers": {
+        "orderer.example.com": {
+            "url": "grpcs://localhost:7050",
+            "tlsCACerts": {
+                "path": "E:\\server_ship\\blockchainCore\\network\\crypto-config\\ordererOrganizations\\example.com\\orderers\\orderer.example.com\\tls\\ca.crt"
+            },
+            "grpcOptions": {
+                "ssl-target-name-override": "orderer.example.com",
+                "hostnameOverride": "orderer.example.com"
+            }
+        }
+    },
+    "certificateAuthorities": {
+        "ca.manufacturer.example.com": {
+            "url": "https://localhost:7054",
+            "caName": "ca-manufacturer",
+            "tlsCACerts": {
+                "path": "E:\\server_ship\\blockchainCore\\network\\crypto-config\\peerOrganizations\\manufacturer.example.com\\ca\\ca.manufacturer.example.com-cert.pem"
+            },
+            "httpOptions": {
+                "verify": false
+            }
+        }
+    },
+    "channels": {
+        "supplychain-channel": {
+            "orderers": [
+                "orderer.example.com"
+            ],
+            "peers": {
+                "peer0.manufacturer.example.com": {
+                    "endorsingPeer": true,
+                    "chaincodeQuery": true,
+                    "ledgerQuery": true,
+                    "eventSource": true
+                },
+                "peer0.shipper.example.com": {
+                    "endorsingPeer": true,
+                    "chaincodeQuery": true,
+                    "ledgerQuery": true,
+                    "eventSource": true
+                },
+                "peer0.warehouse.example.com": {
+                    "endorsingPeer": true,
+                    "chaincodeQuery": true,
+                    "ledgerQuery": true,
+                    "eventSource": true
+                },
+                "peer0.retailer.example.com": {
+                    "endorsingPeer": true,
+                    "chaincodeQuery": true,
+                    "ledgerQuery": true,
+                    "eventSource": true
+                }
+            }
+        }
+    }
+}

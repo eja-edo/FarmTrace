@@ -55,6 +55,43 @@ export default function ProductDetail() {
     }
 
     const productData = product.data
+    const productIdValue = productData.id || productData.productID || productId
+    const productNameValue = productData.name || productData.productName
+
+    const formatDateSafe = (value, formatString = 'MMM dd, yyyy HH:mm:ss') => {
+        if (!value) return '—'
+        try {
+            return format(new Date(value), formatString)
+        } catch (err) {
+            return value
+        }
+    }
+
+    const getStatusBadgeClass = (status) => {
+        switch (status) {
+            case 'InTransit':
+            case 'Shipped':
+                return 'badge-intransit'
+            case 'InWarehouse':
+            case 'DeliveredToRetailer':
+                return 'badge-accepted'
+            case 'Sold':
+                return 'badge-completed'
+            case 'HandoverFailed':
+                return 'badge-rejected'
+            default:
+                return 'badge-pending'
+        }
+    }
+
+    const detailBlocks = [
+        { label: 'Product Name', value: productNameValue, icon: Package },
+        { label: 'Batch', value: productData.batch || '—', icon: Hash },
+        { label: 'Origin', value: productData.origin || '—', icon: MapPin },
+        { label: 'Manufacture Date', value: formatDateSafe(productData.manufactureDate, 'MMM dd, yyyy'), icon: Calendar },
+        { label: 'Owner', value: productData.owner || '—', icon: User },
+        { label: 'Current Holder', value: productData.currentHolder || productData.owner || '—', icon: ArrowRight },
+    ]
 
     return (
         <div className="space-y-6">
@@ -69,21 +106,14 @@ export default function ProductDetail() {
                 <div className="flex items-start justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">
-                            {productData.productName}
+                            {productNameValue}
                         </h1>
                         <p className="text-gray-600 mt-1">
-                            Product ID: {productData.productID}
+                            Product ID: {productIdValue}
                         </p>
                     </div>
                     <span
-                        className={`badge ${productData.status === 'InTransit'
-                                ? 'badge-intransit'
-                                : productData.status === 'Received'
-                                    ? 'badge-accepted'
-                                    : productData.status === 'Sold'
-                                        ? 'badge-completed'
-                                        : 'badge-pending'
-                            }`}
+                        className={`badge ${getStatusBadgeClass(productData.status)}`}
                     >
                         {productData.status}
                     </span>
@@ -97,65 +127,41 @@ export default function ProductDetail() {
                     <div className="card">
                         <h2 className="text-xl font-bold text-gray-900 mb-6">Product Details</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="flex items-start gap-3">
-                                <div className="flex items-center justify-center w-10 h-10 bg-primary-50 rounded-lg flex-shrink-0">
-                                    <Package className="w-5 h-5 text-primary-600" />
+                            {detailBlocks.map(({ label, value, icon: Icon }) => (
+                                <div key={label} className="flex items-start gap-3">
+                                    <div className="flex items-center justify-center w-10 h-10 bg-primary-50 rounded-lg flex-shrink-0">
+                                        <Icon className="w-5 h-5 text-primary-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-600">{label}</p>
+                                        <p className="font-semibold text-gray-900 break-words">{value}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-600">Product Name</p>
-                                    <p className="font-semibold text-gray-900">{productData.productName}</p>
-                                </div>
-                            </div>
+                            ))}
+                        </div>
 
-                            <div className="flex items-start gap-3">
-                                <div className="flex items-center justify-center w-10 h-10 bg-primary-50 rounded-lg flex-shrink-0">
-                                    <Hash className="w-5 h-5 text-primary-600" />
+                        <div className="mt-6 pt-6 border-t border-gray-200 space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-gray-600">Created At</p>
+                                    <p className="font-semibold text-gray-900">{formatDateSafe(productData.createdAt)}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-gray-600">Quantity</p>
-                                    <p className="font-semibold text-gray-900">{productData.quantity}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-3">
-                                <div className="flex items-center justify-center w-10 h-10 bg-primary-50 rounded-lg flex-shrink-0">
-                                    <User className="w-5 h-5 text-primary-600" />
+                                    <p className="text-sm text-gray-600">Updated At</p>
+                                    <p className="font-semibold text-gray-900">{formatDateSafe(productData.updatedAt)}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-gray-600">Current Owner</p>
-                                    <p className="font-semibold text-gray-900">{productData.owner}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-3">
-                                <div className="flex items-center justify-center w-10 h-10 bg-primary-50 rounded-lg flex-shrink-0">
-                                    <MapPin className="w-5 h-5 text-primary-600" />
+                                    <p className="text-sm text-gray-600">Version</p>
+                                    <p className="font-semibold text-gray-900">{productData.version || 1}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-gray-600">Manufacturer</p>
-                                    <p className="font-semibold text-gray-900">{productData.manufacturer}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-3">
-                                <div className="flex items-center justify-center w-10 h-10 bg-primary-50 rounded-lg flex-shrink-0">
-                                    <Calendar className="w-5 h-5 text-primary-600" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600">Created</p>
-                                    <p className="font-semibold text-gray-900">
-                                        {format(new Date(productData.timestamp), 'MMM dd, yyyy HH:mm')}
+                                    <p className="text-sm text-gray-600">Metadata Hash</p>
+                                    <p className="font-mono text-xs text-gray-900 break-all bg-gray-50 p-2 rounded">
+                                        {productData.metaHash || '—'}
                                     </p>
                                 </div>
                             </div>
                         </div>
-
-                        {productData.description && (
-                            <div className="mt-6 pt-6 border-t border-gray-200">
-                                <p className="text-sm text-gray-600 mb-2">Description</p>
-                                <p className="text-gray-900">{productData.description}</p>
-                            </div>
-                        )}
                     </div>
 
                     {/* Approvals history */}
@@ -177,7 +183,10 @@ export default function ProductDetail() {
                                         <div className="flex-1">
                                             <p className="font-semibold text-gray-900">{approval.actor}</p>
                                             <p className="text-sm text-gray-600 mt-1">
-                                                {format(new Date(approval.timestamp), 'MMM dd, yyyy HH:mm:ss')}
+                                                {approval.action} · {approval.actorMsp}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {formatDateSafe(approval.timestamp)}
                                             </p>
                                             {approval.signature && (
                                                 <p className="text-xs text-gray-500 mt-1 font-mono">
@@ -198,18 +207,18 @@ export default function ProductDetail() {
                                 Blockchain History
                             </h2>
                             <div className="space-y-4">
-                                {history.data.map((record, index) => (
+                                {history.data.map((entry, index) => (
                                     <div key={index} className="relative pl-8 pb-6 border-l-2 border-gray-200 last:pb-0">
                                         <div className="absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-primary-600 border-2 border-white" />
                                         <div className="bg-gray-50 p-4 rounded-lg">
                                             <p className="text-sm text-gray-600">
-                                                {format(new Date(record.timestamp), 'MMM dd, yyyy HH:mm:ss')}
+                                                {formatDateSafe(entry.timestamp)}
                                             </p>
                                             <p className="font-medium text-gray-900 mt-1">
-                                                {record.value?.status || 'Status Update'}
+                                                {entry.record?.status || (entry.isDelete ? 'Deleted' : 'Status Update')}
                                             </p>
                                             <p className="text-sm text-gray-600 mt-1">
-                                                Owner: {record.value?.owner}
+                                                Owner: {entry.record?.owner || '—'}
                                             </p>
                                         </div>
                                     </div>
@@ -229,7 +238,7 @@ export default function ProductDetail() {
                         </h3>
                         <div className="flex justify-center p-4 bg-gray-50 rounded-lg">
                             <QRCode
-                                value={productData.productID}
+                                value={productIdValue}
                                 size={200}
                                 level="H"
                                 includeMargin

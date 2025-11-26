@@ -1,0 +1,13 @@
+{
+    "index": {
+        "fields": [
+            "productID",
+            "status",
+            "fromOrg",
+            "toOrg"
+        ]
+    },
+    "ddoc": "indexHandoverDoc",
+    "name": "indexHandover",
+    "type": "json"
+}

@@ -15,21 +15,22 @@ import { useOrgStore } from '../../store'
 export default function RetailerDashboard() {
     const { orgName } = useOrgStore()
 
-    // Fetch products owned by retailer
-    const { data: inventory, isLoading: loadingInventory } = useQuery(
+    const { data: inventoryResponse, isLoading: loadingInventory } = useQuery(
         ['products', 'retailer'],
-        () => productApi.getAll({ owner: 'Retailer' })
+        () => productApi.getAll()
     )
 
-    // Fetch pending handovers
-    const { data: pendingHandovers } = useQuery(
+    const { data: pendingHandoversResponse } = useQuery(
         ['handovers', 'retailer', 'pending'],
-        () => handoverApi.getPending('Retailer')
+        () => handoverApi.getPending()
     )
 
-    // Calculate stats
-    const soldProducts = inventory?.data?.filter(p => p.status === 'Sold').length || 0
-    const availableProducts = inventory?.data?.filter(p => p.status !== 'Sold').length || 0
+    const products = inventoryResponse?.data || []
+    const inventory = products.filter((product) => product.owner === 'Retailer')
+    const pendingHandovers = pendingHandoversResponse?.data?.filter((handover) => handover.toOrg === 'Retailer') || []
+
+    const soldProducts = inventory.filter(p => p.status === 'Sold').length
+    const availableProducts = inventory.filter(p => p.status !== 'Sold').length
 
     const stats = [
         {
@@ -42,7 +43,7 @@ export default function RetailerDashboard() {
         },
         {
             title: 'Pending Receiving',
-            value: pendingHandovers?.data?.filter(h => h.status === 'PENDING').length || 0,
+            value: pendingHandovers.length,
             icon: Clock,
             color: 'yellow-500',
             bgColor: 'bg-yellow-50',
@@ -58,13 +59,16 @@ export default function RetailerDashboard() {
         },
         {
             title: 'Total Inventory',
-            value: inventory?.data?.length || 0,
+            value: inventory.length,
             icon: TrendingUp,
             color: 'blue-500',
             bgColor: 'bg-blue-50',
             textColor: 'text-blue-600',
         },
     ]
+
+    const getProductId = (product) => product.id || product.productID || product.productId
+    const getHandoverId = (handover) => handover.id || handover.handoverID || handover.handoverId
 
     return (
         <div className="space-y-6">
@@ -103,7 +107,7 @@ export default function RetailerDashboard() {
             </div>
 
             {/* Products awaiting receiving */}
-            {pendingHandovers?.data?.filter(h => h.status === 'PENDING').length > 0 && (
+            {pendingHandovers.length > 0 && (
                 <div className="card">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -116,11 +120,11 @@ export default function RetailerDashboard() {
                     </div>
 
                     <div className="space-y-3">
-                        {pendingHandovers.data
-                            .filter(h => h.status === 'PENDING')
-                            .map((handover) => (
+                        {pendingHandovers.map((handover) => {
+                            const handoverId = getHandoverId(handover)
+                            return (
                                 <div
-                                    key={handover.handoverID}
+                                    key={handoverId}
                                     className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors"
                                 >
                                     <div className="flex items-center gap-4">
@@ -129,7 +133,7 @@ export default function RetailerDashboard() {
                                         </div>
                                         <div>
                                             <p className="font-semibold text-gray-900">
-                                                Product: {handover.productID}
+                                                Product: {handover.productId || handover.productID}
                                             </p>
                                             <p className="text-sm text-gray-600">
                                                 From: {handover.fromOrg}
@@ -137,13 +141,14 @@ export default function RetailerDashboard() {
                                         </div>
                                     </div>
                                     <Link
-                                        to={`/handovers/${handover.handoverID}`}
+                                        to={`/handovers/${handoverId}`}
                                         className="btn btn-primary"
                                     >
                                         Confirm Receipt
                                     </Link>
                                 </div>
-                            ))}
+                            )
+                        })}
                     </div>
                 </div>
             )}
@@ -163,14 +168,16 @@ export default function RetailerDashboard() {
                             <div key={i} className="skeleton h-20 rounded-lg" />
                         ))}
                     </div>
-                ) : inventory?.data?.filter(p => p.status !== 'Sold').length > 0 ? (
+                ) : inventory.filter(p => p.status !== 'Sold').length > 0 ? (
                     <div className="space-y-3">
-                        {inventory.data
+                        {inventory
                             .filter(p => p.status !== 'Sold')
                             .slice(0, 5)
-                            .map((product) => (
+                            .map((product) => {
+                                const productId = getProductId(product)
+                                return (
                                 <div
-                                    key={product.productID}
+                                        key={productId}
                                     className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                                 >
                                     <div className="flex items-center gap-4">
@@ -179,10 +186,10 @@ export default function RetailerDashboard() {
                                         </div>
                                         <div>
                                             <p className="font-semibold text-gray-900">
-                                                {product.productName}
+                                                    {product.name || product.productName}
                                             </p>
                                             <p className="text-sm text-gray-600">
-                                                ID: {product.productID}
+                                                    ID: {productId}
                                             </p>
                                         </div>
                                     </div>
@@ -191,14 +198,15 @@ export default function RetailerDashboard() {
                                             Available
                                         </span>
                                         <Link
-                                            to={`/products/${product.productID}`}
+                                                to={`/products/${productId}`}
                                             className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                                         >
                                             <Eye className="w-5 h-5 text-gray-600" />
                                         </Link>
                                     </div>
                                 </div>
-                            ))}
+                                )
+                            })}
                     </div>
                 ) : (
                     <div className="text-center py-12">
@@ -216,12 +224,14 @@ export default function RetailerDashboard() {
                     </div>
 
                     <div className="space-y-3">
-                        {inventory.data
+                        {inventory
                             .filter(p => p.status === 'Sold')
                             .slice(0, 5)
-                            .map((product) => (
+                            .map((product) => {
+                                const productId = getProductId(product)
+                                return (
                                 <div
-                                    key={product.productID}
+                                        key={productId}
                                     className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
                                 >
                                     <div className="flex items-center gap-4">
@@ -230,10 +240,10 @@ export default function RetailerDashboard() {
                                         </div>
                                         <div>
                                             <p className="font-semibold text-gray-900">
-                                                {product.productName}
+                                                    {product.name || product.productName}
                                             </p>
                                             <p className="text-sm text-gray-600">
-                                                ID: {product.productID}
+                                                    ID: {productId}
                                             </p>
                                         </div>
                                     </div>
@@ -241,7 +251,8 @@ export default function RetailerDashboard() {
                                         Sold
                                     </span>
                                 </div>
-                            ))}
+                                )
+                            })}
                     </div>
                 </div>
             )}

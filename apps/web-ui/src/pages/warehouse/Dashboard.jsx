@@ -15,28 +15,26 @@ import { useOrgStore } from '../../store'
 export default function WarehouseDashboard() {
     const { orgName } = useOrgStore()
 
-    // Fetch inventory (products owned by warehouse)
-    const { data: inventory, isLoading: loadingInventory } = useQuery(
+    const { data: productsResponse, isLoading: loadingInventory } = useQuery(
         ['products', 'warehouse'],
-        () => productApi.getAll({ owner: 'Warehouse' })
+        () => productApi.getAll()
     )
 
-    // Fetch pending handovers to warehouse
-    const { data: pendingHandovers } = useQuery(
+    const { data: pendingHandoversResponse } = useQuery(
         ['handovers', 'warehouse', 'pending'],
-        () => handoverApi.getPending('Warehouse')
+        () => handoverApi.getPending()
     )
 
-    // Fetch completed handovers
-    const { data: allHandovers } = useQuery(
-        ['handovers', 'warehouse', 'all'],
-        () => handoverApi.getAll({ organization: 'Warehouse' })
-    )
+    const products = productsResponse?.data || []
+    const inventory = products.filter((product) => product.owner === 'Warehouse')
+    const pendingHandovers = pendingHandoversResponse?.data || []
+    const inboundHandovers = pendingHandovers.filter((handover) => handover.toOrg === 'Warehouse')
+    const outboundHandovers = pendingHandovers.filter((handover) => handover.fromOrg === 'Warehouse')
 
     const stats = [
         {
             title: 'Total Inventory',
-            value: inventory?.data?.length || 0,
+            value: inventory.length,
             icon: Package,
             color: 'warehouse',
             bgColor: 'bg-warehouse/10',
@@ -44,7 +42,7 @@ export default function WarehouseDashboard() {
         },
         {
             title: 'Pending Receiving',
-            value: pendingHandovers?.data?.filter(h => h.status === 'PENDING').length || 0,
+            value: inboundHandovers.length,
             icon: Clock,
             color: 'yellow-500',
             bgColor: 'bg-yellow-50',
@@ -52,24 +50,28 @@ export default function WarehouseDashboard() {
         },
         {
             title: 'Received Today',
-            value: inventory?.data?.filter(p => {
+            value: inventory.filter(p => {
+                if (!p.updatedAt) return false
                 const today = new Date().toDateString()
-                return new Date(p.timestamp).toDateString() === today
-            }).length || 0,
+                return new Date(p.updatedAt).toDateString() === today
+            }).length,
             icon: CheckCircle,
             color: 'green-500',
             bgColor: 'bg-green-50',
             textColor: 'text-green-600',
         },
         {
-            title: 'Total Received',
-            value: allHandovers?.data?.filter(h => h.status === 'ACCEPTED').length || 0,
+            title: 'Outbound Requests',
+            value: outboundHandovers.length,
             icon: ArrowRightLeft,
             color: 'blue-500',
             bgColor: 'bg-blue-50',
             textColor: 'text-blue-600',
         },
     ]
+
+    const getProductId = (product) => product.id || product.productID || product.productId
+    const getHandoverId = (handover) => handover.id || handover.handoverID || handover.handoverId
 
     return (
         <div className="space-y-6">
@@ -119,13 +121,13 @@ export default function WarehouseDashboard() {
                     </Link>
                 </div>
 
-                {pendingHandovers?.data?.filter(h => h.status === 'PENDING').length > 0 ? (
+                {inboundHandovers.length > 0 ? (
                     <div className="space-y-3">
-                        {pendingHandovers.data
-                            .filter(h => h.status === 'PENDING')
-                            .map((handover) => (
+                        {inboundHandovers.map((handover) => {
+                            const handoverId = getHandoverId(handover)
+                            return (
                                 <div
-                                    key={handover.handoverID}
+                                    key={handoverId}
                                     className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors"
                                 >
                                     <div className="flex items-center gap-4">
@@ -134,24 +136,27 @@ export default function WarehouseDashboard() {
                                         </div>
                                         <div>
                                             <p className="font-semibold text-gray-900">
-                                                Product: {handover.productID}
+                                                Product: {handover.productId || handover.productID}
                                             </p>
                                             <p className="text-sm text-gray-600">
                                                 From: {handover.fromOrg}
                                             </p>
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                Waybill: {handover.waybillNumber}
-                                            </p>
+                                            {handover.metadata?.warehouseId && (
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Warehouse ID: {handover.metadata.warehouseId}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                     <Link
-                                        to={`/handovers/${handover.handoverID}`}
+                                        to={`/handovers/${handoverId}`}
                                         className="btn btn-primary"
                                     >
                                         Confirm Receipt
                                     </Link>
                                 </div>
-                            ))}
+                            )
+                        })}
                     </div>
                 ) : (
                     <div className="text-center py-12">
@@ -176,39 +181,42 @@ export default function WarehouseDashboard() {
                             <div key={i} className="skeleton h-20 rounded-lg" />
                         ))}
                     </div>
-                ) : inventory?.data?.length > 0 ? (
+                ) : inventory.length > 0 ? (
                     <div className="space-y-3">
-                        {inventory.data.slice(0, 5).map((product) => (
-                            <div
-                                key={product.productID}
-                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center justify-center w-12 h-12 bg-warehouse/10 rounded-lg">
-                                        <Package className="w-6 h-6 text-warehouse" />
+                        {inventory.slice(0, 5).map((product) => {
+                            const productId = getProductId(product)
+                            return (
+                                <div
+                                    key={productId}
+                                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center justify-center w-12 h-12 bg-warehouse/10 rounded-lg">
+                                            <Package className="w-6 h-6 text-warehouse" />
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-gray-900">
+                                                {product.name || product.productName}
+                                            </p>
+                                            <p className="text-sm text-gray-600">
+                                                ID: {productId}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-semibold text-gray-900">
-                                            {product.productName}
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            ID: {product.productID}
-                                        </p>
+                                    <div className="flex items-center gap-4">
+                                        <span className="badge badge-accepted">
+                                            In Stock
+                                        </span>
+                                        <Link
+                                            to={`/products/${productId}`}
+                                            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                        >
+                                            <Eye className="w-5 h-5 text-gray-600" />
+                                        </Link>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <span className="badge badge-accepted">
-                                        In Stock
-                                    </span>
-                                    <Link
-                                        to={`/products/${product.productID}`}
-                                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                                    >
-                                        <Eye className="w-5 h-5 text-gray-600" />
-                                    </Link>
-                                </div>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 ) : (
                     <div className="text-center py-12">

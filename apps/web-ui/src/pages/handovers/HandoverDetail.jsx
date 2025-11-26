@@ -12,6 +12,7 @@ import {
     XCircle,
     Loader,
     AlertCircle,
+    Info
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { handoverApi } from '../../lib/api'
@@ -25,8 +26,7 @@ export default function HandoverDetail() {
 
     const [showAcceptModal, setShowAcceptModal] = useState(false)
     const [showRejectModal, setShowRejectModal] = useState(false)
-    const [receiverID, setReceiverID] = useState('')
-    const [signature, setSignature] = useState('')
+    const [receiverId, setReceiverId] = useState('')
     const [rejectReason, setRejectReason] = useState('')
 
     const { data: handover, isLoading } = useQuery(
@@ -62,25 +62,23 @@ export default function HandoverDetail() {
 
     const handleAccept = (e) => {
         e.preventDefault()
-        if (!receiverID || !signature) {
-            toast.error('Please fill in all fields')
+        if (!receiverId) {
+            toast.error('Receiver ID is required')
             return
         }
         acceptMutation.mutate({
-            receiverID,
-            signature,
+            receiverId
         })
     }
 
     const handleReject = (e) => {
         e.preventDefault()
-        if (!rejectReason || !signature) {
-            toast.error('Please fill in all fields')
+        if (!rejectReason) {
+            toast.error('Rejection reason is required')
             return
         }
         rejectMutation.mutate({
-            reason: rejectReason,
-            signature,
+            reason: rejectReason
         })
     }
 
@@ -108,7 +106,36 @@ export default function HandoverDetail() {
     }
 
     const handoverData = handover.data
-    const canApprove = handoverData.status === 'PENDING' && handoverData.toOrg === orgName
+    const handoverIdValue = handoverData.id || handoverData.handoverID || handoverData.handoverId || handoverId
+    const productIdValue = handoverData.productId || handoverData.productID
+    const waybillValue =
+        handoverData.metadata?.waybill ||
+        handoverData.metadata?.waybillNumber ||
+        handoverData.waybill ||
+        handoverData.waybillNumber
+    const shipperIdValue =
+        handoverData.metadata?.shipperId ||
+        handoverData.metadata?.shipperID ||
+        handoverData.shipperId ||
+        handoverData.shipperID
+    const expiresAt = handoverData.expiresAt
+    const requestedAt = handoverData.requestedAt || handoverData.timestamp || handoverData.createdAt
+    const noncePreview = handoverData.nonce || 'NONCE'
+    const signatureMessagePreview = `${handoverIdValue}:${noncePreview}:${receiverId || 'RECEIVER'}`
+    const canApprove =
+        handoverData.status === 'PENDING' &&
+        handoverData.toOrg &&
+        orgName &&
+        handoverData.toOrg.toLowerCase() === orgName.toLowerCase()
+
+    const formatDateSafe = (value) => {
+        if (!value) return '—'
+        try {
+            return format(new Date(value), 'MMM dd, yyyy HH:mm:ss')
+        } catch (err) {
+            return value
+        }
+    }
 
     return (
         <div className="space-y-6">
@@ -124,15 +151,15 @@ export default function HandoverDetail() {
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">Handover Details</h1>
                         <p className="text-gray-600 mt-1">
-                            Handover ID: {handoverData.handoverID}
+                            Handover ID: {handoverIdValue}
                         </p>
                     </div>
                     <span
                         className={`badge ${handoverData.status === 'PENDING'
-                                ? 'badge-pending'
-                                : handoverData.status === 'ACCEPTED'
-                                    ? 'badge-accepted'
-                                    : 'badge-rejected'
+                            ? 'badge-pending'
+                            : handoverData.status === 'ACCEPTED'
+                                ? 'badge-accepted'
+                                : 'badge-rejected'
                             }`}
                     >
                         {handoverData.status}
@@ -185,10 +212,10 @@ export default function HandoverDetail() {
                                 <div className="flex-1">
                                     <p className="text-sm text-gray-600">Product</p>
                                     <Link
-                                        to={`/products/${handoverData.productID}`}
+                                        to={`/products/${productIdValue}`}
                                         className="font-semibold text-primary-600 hover:underline"
                                     >
-                                        {handoverData.productID}
+                                        {productIdValue}
                                     </Link>
                                 </div>
                             </div>
@@ -212,7 +239,7 @@ export default function HandoverDetail() {
                                     <FileText className="w-5 h-5 text-gray-400 mt-1" />
                                     <div>
                                         <p className="text-sm text-gray-600">Waybill Number</p>
-                                        <p className="font-semibold text-gray-900">{handoverData.waybillNumber}</p>
+                                        <p className="font-semibold text-gray-900">{waybillValue || '—'}</p>
                                     </div>
                                 </div>
 
@@ -220,16 +247,16 @@ export default function HandoverDetail() {
                                     <User className="w-5 h-5 text-gray-400 mt-1" />
                                     <div>
                                         <p className="text-sm text-gray-600">Shipper ID</p>
-                                        <p className="font-semibold text-gray-900">{handoverData.shipperID}</p>
+                                        <p className="font-semibold text-gray-900">{shipperIdValue || '—'}</p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-start gap-3">
                                     <Calendar className="w-5 h-5 text-gray-400 mt-1" />
                                     <div>
-                                        <p className="text-sm text-gray-600">Initiated</p>
+                                        <p className="text-sm text-gray-600">Requested At</p>
                                         <p className="font-semibold text-gray-900">
-                                            {format(new Date(handoverData.timestamp), 'MMM dd, yyyy HH:mm:ss')}
+                                            {formatDateSafe(requestedAt)}
                                         </p>
                                     </div>
                                 </div>
@@ -264,10 +291,17 @@ export default function HandoverDetail() {
                                     <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
                                     <div className="flex-1">
                                         <p className="font-semibold text-gray-900 mb-1">Handover Accepted</p>
-                                        <p className="text-sm text-gray-600">Accepted by: {handoverData.acceptedBy}</p>
-                                        {handoverData.receiverSignature && (
-                                            <p className="text-xs font-mono text-gray-600 mt-2">
-                                                Signature: {handoverData.receiverSignature}
+                                        <p className="text-sm text-gray-600">
+                                            Accepted by: {handoverData.acceptedBy}
+                                        </p>
+                                        {handoverData.acceptedAt && (
+                                            <p className="text-sm text-gray-600">
+                                                Accepted at: {formatDateSafe(handoverData.acceptedAt)}
+                                            </p>
+                                        )}
+                                        {handoverData.toSignature && (
+                                            <p className="text-xs font-mono text-gray-600 mt-2 break-all">
+                                                Signature: {handoverData.toSignature}
                                             </p>
                                         )}
                                     </div>
@@ -279,12 +313,17 @@ export default function HandoverDetail() {
                                     <XCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
                                     <div className="flex-1">
                                         <p className="font-semibold text-gray-900 mb-1">Handover Rejected</p>
-                                        <p className="text-sm text-gray-700 mt-2">
+                                        <p className="text-sm text-gray-700">
                                             Reason: {handoverData.rejectionReason}
                                         </p>
-                                        {handoverData.receiverSignature && (
-                                            <p className="text-xs font-mono text-gray-600 mt-2">
-                                                Signature: {handoverData.receiverSignature}
+                                        {handoverData.rejectedAt && (
+                                            <p className="text-sm text-gray-600">
+                                                Rejected at: {formatDateSafe(handoverData.rejectedAt)}
+                                            </p>
+                                        )}
+                                        {handoverData.toSignature && (
+                                            <p className="text-xs font-mono text-gray-600 mt-2 break-all">
+                                                Signature: {handoverData.toSignature}
                                             </p>
                                         )}
                                     </div>
@@ -323,13 +362,13 @@ export default function HandoverDetail() {
                     <div className="card">
                         <h3 className="font-bold text-gray-900 mb-4">Related Product</h3>
                         <Link
-                            to={`/products/${handoverData.productID}`}
+                            to={`/products/${productIdValue}`}
                             className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                         >
                             <div className="flex items-center gap-3">
                                 <Package className="w-10 h-10 text-primary-600" />
                                 <div>
-                                    <p className="font-semibold text-gray-900">{handoverData.productID}</p>
+                                    <p className="font-semibold text-gray-900">{productIdValue}</p>
                                     <p className="text-sm text-gray-600">View product details →</p>
                                 </div>
                             </div>
@@ -340,12 +379,24 @@ export default function HandoverDetail() {
 
             {/* Accept Modal */}
             {showAcceptModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-md w-full p-6">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div className="bg-white rounded-lg max-w-2xl w-full p-6 my-8">
                         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <CheckCircle className="w-6 h-6 text-green-600" />
                             Accept Handover
                         </h3>
+
+                        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                            <Info className="w-5 h-5 text-blue-700 mt-1" />
+                            <div>
+                                <p className="font-semibold text-blue-900">Auto-signature enabled</p>
+                                <p className="text-sm text-blue-800 mt-1">
+                                    The gateway queries the nonce, generates the ECDSA signature with your organization's private key,
+                                    and submits the blockchain transaction automatically. Provide the receiver ID and we do the rest.
+                                </p>
+                            </div>
+                        </div>
+
                         <form onSubmit={handleAccept} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -353,30 +404,26 @@ export default function HandoverDetail() {
                                 </label>
                                 <input
                                     type="text"
-                                    value={receiverID}
-                                    onChange={(e) => setReceiverID(e.target.value)}
-                                    placeholder="Enter your receiver ID"
+                                    value={receiverId}
+                                    onChange={(e) => setReceiverId(e.target.value)}
+                                    placeholder="e.g., DRIVER-001"
                                     className="input"
                                     required
                                 />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Digital Signature <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={signature}
-                                    onChange={(e) => setSignature(e.target.value)}
-                                    placeholder="Enter your signature"
-                                    className="input"
-                                    required
-                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Signature message preview:&nbsp;
+                                    <code className="font-mono text-[11px] bg-gray-100 px-1 py-0.5 rounded">
+                                        {signatureMessagePreview}
+                                    </code>
+                                </p>
                             </div>
                             <div className="flex gap-3 pt-4">
                                 <button
                                     type="button"
-                                    onClick={() => setShowAcceptModal(false)}
+                                    onClick={() => {
+                                        setShowAcceptModal(false)
+                                        setReceiverId('')
+                                    }}
                                     className="btn btn-secondary flex-1"
                                     disabled={acceptMutation.isLoading}
                                 >
@@ -385,7 +432,7 @@ export default function HandoverDetail() {
                                 <button
                                     type="submit"
                                     className="btn btn-success flex-1 flex items-center justify-center gap-2"
-                                    disabled={acceptMutation.isLoading}
+                                    disabled={acceptMutation.isLoading || !receiverId}
                                 >
                                     {acceptMutation.isLoading ? (
                                         <>
@@ -395,7 +442,7 @@ export default function HandoverDetail() {
                                     ) : (
                                         <>
                                             <CheckCircle className="w-5 h-5" />
-                                            Accept
+                                            Accept Handover
                                         </>
                                     )}
                                 </button>
@@ -407,12 +454,23 @@ export default function HandoverDetail() {
 
             {/* Reject Modal */}
             {showRejectModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-md w-full p-6">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+                    <div className="bg-white rounded-lg max-w-2xl w-full p-6 my-8">
                         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <XCircle className="w-6 h-6 text-red-600" />
                             Reject Handover
                         </h3>
+
+                        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                            <Info className="w-5 h-5 text-red-700 mt-1" />
+                            <div>
+                                <p className="font-semibold text-red-900">No manual signature required</p>
+                                <p className="text-sm text-red-800 mt-1">
+                                    Provide a clear rejection reason and the gateway will auto-sign the rejection using the nonce from the blockchain.
+                                </p>
+                            </div>
+                        </div>
+
                         <form onSubmit={handleReject} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -421,21 +479,8 @@ export default function HandoverDetail() {
                                 <textarea
                                     value={rejectReason}
                                     onChange={(e) => setRejectReason(e.target.value)}
-                                    placeholder="Explain why you're rejecting this handover"
+                                    placeholder="Explain why you're rejecting this handover (e.g., damaged goods, incorrect documentation)"
                                     rows={4}
-                                    className="input"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Digital Signature <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={signature}
-                                    onChange={(e) => setSignature(e.target.value)}
-                                    placeholder="Enter your signature"
                                     className="input"
                                     required
                                 />
@@ -443,7 +488,10 @@ export default function HandoverDetail() {
                             <div className="flex gap-3 pt-4">
                                 <button
                                     type="button"
-                                    onClick={() => setShowRejectModal(false)}
+                                    onClick={() => {
+                                        setShowRejectModal(false)
+                                        setRejectReason('')
+                                    }}
                                     className="btn btn-secondary flex-1"
                                     disabled={rejectMutation.isLoading}
                                 >
@@ -452,7 +500,7 @@ export default function HandoverDetail() {
                                 <button
                                     type="submit"
                                     className="btn btn-danger flex-1 flex items-center justify-center gap-2"
-                                    disabled={rejectMutation.isLoading}
+                                    disabled={rejectMutation.isLoading || !rejectReason}
                                 >
                                     {rejectMutation.isLoading ? (
                                         <>
@@ -462,7 +510,7 @@ export default function HandoverDetail() {
                                     ) : (
                                         <>
                                             <XCircle className="w-5 h-5" />
-                                            Reject
+                                            Reject Handover
                                         </>
                                     )}
                                 </button>

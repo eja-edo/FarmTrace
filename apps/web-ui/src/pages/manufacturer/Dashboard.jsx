@@ -4,7 +4,6 @@ import {
     Package,
     ArrowRightLeft,
     TrendingUp,
-    AlertCircle,
     Plus,
     Eye,
     Clock
@@ -16,50 +15,72 @@ import { useOrgStore } from '../../store'
 export default function ManufacturerDashboard() {
     const { orgName } = useOrgStore()
 
-    // Fetch products
-    const { data: products, isLoading: loadingProducts } = useQuery(
+    const { data: productsResponse, isLoading: loadingProducts } = useQuery(
         ['products', 'manufacturer'],
-        () => productApi.getAll({ owner: 'Manufacturer' })
+        () => productApi.getAll()
     )
 
-    // Fetch pending handovers
-    const { data: handovers, isLoading: loadingHandovers } = useQuery(
-        ['handovers', 'manufacturer'],
-        () => handoverApi.getPending('Manufacturer')
+    const { data: pendingHandoversResponse, isLoading: loadingHandovers } = useQuery(
+        ['handovers', 'manufacturer', 'pending'],
+        () => handoverApi.getPending()
     )
+
+    const products = productsResponse?.data || []
+    const manufacturerProducts = products.filter((product) => product.owner === 'Manufacturer')
+    const pendingHandovers = pendingHandoversResponse?.data || []
+
+    const getProductId = (product) => product.id || product.productID || product.productId
+    const getStatusBadgeClass = (status) => {
+        switch (status) {
+            case 'InTransit':
+            case 'Shipped':
+                return 'badge-intransit'
+            case 'InWarehouse':
+            case 'DeliveredToRetailer':
+                return 'badge-accepted'
+            case 'Sold':
+                return 'badge-completed'
+            case 'HandoverFailed':
+                return 'badge-rejected'
+            default:
+                return 'badge-pending'
+        }
+    }
+
+    const getHandoverId = (handover) => handover.id || handover.handoverID || handover.handoverId
 
     const stats = [
         {
             title: 'Total Products',
-            value: products?.data?.length || 0,
+            value: manufacturerProducts.length,
             icon: Package,
             color: 'manufacturer',
             bgColor: 'bg-manufacturer/10',
             textColor: 'text-manufacturer',
         },
         {
-            title: 'Pending Handovers',
-            value: handovers?.data?.filter(h => h.status === 'PENDING').length || 0,
-            icon: Clock,
-            color: 'yellow-500',
-            bgColor: 'bg-yellow-50',
-            textColor: 'text-yellow-600',
-        },
-        {
-            title: 'Completed Handovers',
-            value: handovers?.data?.filter(h => h.status === 'ACCEPTED').length || 0,
+            title: 'Ready to Handover',
+            value: manufacturerProducts.filter(p => p.status === 'Manufactured').length,
             icon: TrendingUp,
             color: 'green-500',
             bgColor: 'bg-green-50',
             textColor: 'text-green-600',
         },
         {
-            title: 'Failed Handovers',
-            value: handovers?.data?.filter(h => h.status === 'REJECTED').length || 0,
-            icon: AlertCircle,
-            color: 'red-500',
-            bgColor: 'bg-red-50',
-            textColor: 'text-red-600',
+            title: 'Pending Handovers',
+            value: pendingHandovers.length,
+            icon: Clock,
+            color: 'yellow-500',
+            bgColor: 'bg-yellow-50',
+            textColor: 'text-yellow-600',
+        },
+        {
+            title: 'In Transit',
+            value: products.filter(p => p.status === 'InTransit').length,
+            icon: ArrowRightLeft,
+            color: 'blue-500',
+            bgColor: 'bg-blue-50',
+            textColor: 'text-blue-600',
         },
     ]
 
@@ -123,11 +144,13 @@ export default function ManufacturerDashboard() {
                             <div key={i} className="skeleton h-20 rounded-lg" />
                         ))}
                     </div>
-                ) : products?.data?.length > 0 ? (
+                ) : manufacturerProducts.length > 0 ? (
                     <div className="space-y-3">
-                        {products.data.slice(0, 5).map((product) => (
+                        {manufacturerProducts.slice(0, 5).map((product) => {
+                            const productId = getProductId(product)
+                            return (
                             <div
-                                key={product.productID}
+                                    key={productId}
                                 className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                             >
                                 <div className="flex items-center gap-4">
@@ -136,29 +159,27 @@ export default function ManufacturerDashboard() {
                                     </div>
                                     <div>
                                         <p className="font-semibold text-gray-900">
-                                            {product.productName}
+                                                {product.name || product.productName}
                                         </p>
                                         <p className="text-sm text-gray-600">
-                                            ID: {product.productID}
+                                                ID: {productId}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    <span className={`badge ${product.status === 'InTransit' ? 'badge-intransit' :
-                                            product.status === 'Received' ? 'badge-accepted' :
-                                                'badge-pending'
-                                        }`}>
+                                        <span className={`badge ${getStatusBadgeClass(product.status)}`}>
                                         {product.status}
                                     </span>
                                     <Link
-                                        to={`/products/${product.productID}`}
+                                            to={`/products/${productId}`}
                                         className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                                     >
                                         <Eye className="w-5 h-5 text-gray-600" />
                                     </Link>
                                 </div>
                             </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 ) : (
                     <div className="text-center py-12">
@@ -186,14 +207,13 @@ export default function ManufacturerDashboard() {
                             <div key={i} className="skeleton h-20 rounded-lg" />
                         ))}
                     </div>
-                ) : handovers?.data?.filter(h => h.status === 'PENDING').length > 0 ? (
+                ) : pendingHandovers.length > 0 ? (
                     <div className="space-y-3">
-                        {handovers.data
-                            .filter(h => h.status === 'PENDING')
-                            .slice(0, 5)
-                            .map((handover) => (
+                        {pendingHandovers.slice(0, 5).map((handover) => {
+                            const handoverId = getHandoverId(handover)
+                            return (
                                 <div
-                                    key={handover.handoverID}
+                                    key={handoverId}
                                     className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                                 >
                                     <div className="flex items-center gap-4">
@@ -202,11 +222,14 @@ export default function ManufacturerDashboard() {
                                         </div>
                                         <div>
                                             <p className="font-semibold text-gray-900">
-                                                {handover.productID}
+                                                {handover.productId || handover.productID}
                                             </p>
                                             <p className="text-sm text-gray-600">
-                                                To: {handover.toOrg}
+                                                {handover.fromOrg} → {handover.toOrg}
                                             </p>
+                                            {handover.metadata?.waybill && (
+                                                <p className="text-xs text-gray-500">Waybill: {handover.metadata.waybill}</p>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
@@ -214,14 +237,15 @@ export default function ManufacturerDashboard() {
                                             Pending
                                         </span>
                                         <Link
-                                            to={`/handovers/${handover.handoverID}`}
+                                            to={`/handovers/${handoverId}`}
                                             className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                                         >
                                             <Eye className="w-5 h-5 text-gray-600" />
                                         </Link>
                                     </div>
                                 </div>
-                            ))}
+                            )
+                        })}
                     </div>
                 ) : (
                     <div className="text-center py-12">

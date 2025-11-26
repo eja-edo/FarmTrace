@@ -15,8 +15,11 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
     (config) => {
         const orgContext = localStorage.getItem('selectedOrg')
+        const userId = localStorage.getItem('userId') || 'user1'
+
+        // Use X-User-Identity header format: org:userId
         if (orgContext) {
-            config.headers['X-Org-Context'] = orgContext
+            config.headers['X-User-Identity'] = `${orgContext}:${userId}`
         }
         return config
     },
@@ -46,33 +49,33 @@ apiClient.interceptors.response.use(
 // ============================================
 
 export const productApi = {
-    // Create new product
+    // Create new product (V2)
     create: async (data) => {
-        const response = await apiClient.post('/api/products', data)
+        const response = await apiClient.post('/api/v2/products', data)
         return response.data
     },
 
-    // Get product by ID
+    // Get product by ID (V2)
     getById: async (productId) => {
-        const response = await apiClient.get(`/api/products/${productId}`)
+        const response = await apiClient.get(`/api/v2/products/${productId}`)
         return response.data
     },
 
-    // Get all products
+    // Get all products (V2)
     getAll: async (filters = {}) => {
-        const response = await apiClient.get('/api/products', { params: filters })
+        const response = await apiClient.get('/api/v2/products', { params: filters })
         return response.data
     },
 
-    // Get product history
+    // Get product history (V2)
     getHistory: async (productId) => {
-        const response = await apiClient.get(`/api/products/${productId}/history`)
+        const response = await apiClient.get(`/api/v2/products/${productId}/history`)
         return response.data
     },
 
-    // Update product status
-    updateStatus: async (productId, status) => {
-        const response = await apiClient.patch(`/api/products/${productId}/status`, { status })
+    // Mark product as sold (V2)
+    markAsSold: async (productId, data) => {
+        const response = await apiClient.put(`/api/v2/products/${productId}/sold`, data)
         return response.data
     },
 }
@@ -82,39 +85,39 @@ export const productApi = {
 // ============================================
 
 export const handoverApi = {
-    // Request handover to shipper
-    requestToShipper: async (data) => {
-        const response = await apiClient.post('/api/handovers/request-shipper', data)
+    // Request handover manufacturer -> shipper (V2)
+    requestManufacturerToShipper: async (data) => {
+        const response = await apiClient.post('/api/v2/handovers/manufacturer-shipper', data)
         return response.data
     },
 
-    // Get pending handovers for organization
-    getPending: async (organization) => {
-        const response = await apiClient.get('/api/handovers/pending', { params: { organization } })
+    // Request handover shipper -> warehouse (V2)
+    requestShipperToWarehouse: async (data) => {
+        const response = await apiClient.post('/api/v2/handovers/shipper-warehouse', data)
         return response.data
     },
 
-    // Accept handover
+    // Get pending handovers (V2)
+    getPending: async () => {
+        const response = await apiClient.get('/api/v2/handovers/pending')
+        return response.data
+    },
+
+    // Accept handover (V2)
     accept: async (handoverId, data) => {
-        const response = await apiClient.post(`/api/handovers/${handoverId}/accept`, data)
+        const response = await apiClient.post(`/api/v2/handovers/${handoverId}/accept`, data)
         return response.data
     },
 
-    // Reject handover
+    // Reject handover (V2)
     reject: async (handoverId, data) => {
-        const response = await apiClient.post(`/api/handovers/${handoverId}/reject`, data)
+        const response = await apiClient.post(`/api/v2/handovers/${handoverId}/reject`, data)
         return response.data
     },
 
-    // Get handover by ID
+    // Get handover by ID (V2)
     getById: async (handoverId) => {
-        const response = await apiClient.get(`/api/handovers/${handoverId}`)
-        return response.data
-    },
-
-    // Get all handovers
-    getAll: async (filters = {}) => {
-        const response = await apiClient.get('/api/handovers', { params: filters })
+        const response = await apiClient.get(`/api/v2/handovers/${handoverId}`)
         return response.data
     },
 }

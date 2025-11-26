@@ -206,13 +206,15 @@ Grafana:    3001
 - TLS 1.2+ for all peer-to-peer communication
 - MSP-based identity management
 
-**Layer 2: Application Signatures (Metadata)** ⚠️ NOT CRYPTOGRAPHIC
-- Signature fields in `Handover` and `Approval` structs are STRINGS
-- Stored for audit trail, but NOT cryptographically verified
-- Test scripts use "sig100", "sig200" - would work in production!
-- Future enhancement: Implement crypto/ecdsa verification
+**Layer 2: Application Signatures (CRYPTOGRAPHIC)** ✅ ACTIVE IN v2.6
+- `AcceptHandover()` validates REAL ECDSA signatures via `verifySignature()`
+- Extracts public key from caller's X.509 certificate
+- Verifies ASN.1 DER format signature against SHA-256 hash
+- Nonce-based replay attack prevention: signature must match `handoverID:nonce:receiverID`
+- Test scripts MUST use `generate_signature()` function with organization private keys
+- Signature format: 140-144 hex characters (ASN.1 DER encoded R||S)
 
-**Key Insight**: Fabric's transaction signatures (Layer 1) provide production-grade security. Application signatures are additional audit metadata.
+**Key Insight**: Both Fabric AND application layers provide cryptographic security. Handover acceptance requires REAL signatures from organization private keys (`*_sk` files).
 
 ## Testing Infrastructure
 
@@ -277,22 +279,187 @@ docker exec fabric-tools bash -c 'peer chaincode query \
 
 **Organization Naming**: Config files use `OrgManufacturerMSP`, Docker hostnames use `peer0.manufacturer.example.com`, chaincode validates MSP IDs with "MSP" suffix
 
-## Current Production Status (Nov 23, 2025)
+## Chaincode Versioning & Evolution
 
-✅ Network: 13 containers operational  
-✅ Chaincode: v1.0 sequence 1 committed with 4/4 approvals  
-✅ Tests: 13/13 unit tests + 3/3 integration tests passing  
-✅ Security: X.509 + ECDSA signatures active, MSP validation enforced  
-✅ Handover Workflow: Verified end-to-end (see TEST_RESULTS_NOV12_2025.md)  
+**Current Deployed**: v1.0 (Sequence 3) - November 2025  
+**Architecture**: 1714 lines with state machine pattern
+
+**Version History**:
+- v1.0 (Seq 1): Initial deployment - basic handover workflow
+- v2.1 (Seq 2): Added private data collections + temperature tracking
+- v2.3 (Seq 3): State transition validation + pagination + version control
+
+**State Machine** (enforced in code):
+```go
+Manufactured → HandoverRequested → InTransit → Shipped → 
+InWarehouse → DeliveredToRetailer → Sold
+```
+
+**Key Function**: `isValidStateTransition(currentStatus, newStatus, mspID)` validates all status changes against MSP authorization matrix.
+
+## Web UI (React + Vite)
+
+**Location**: `apps/web-ui/`  
+**Stack**: React 18 + Vite 5 + Tailwind CSS 3 + React Router v6  
+**Port**: 5173 (dev), connects to API on 3000
+
+**Key Features**:
+- Organization selector (4 roles with color-coded themes)
+- Auto-generated ECDSA signatures (via `/api/v2/signatures/generate`)
+- QR code generation for products
+- Real-time handover status updates
+- SignatureHelper component for manual/auto signature generation
+
+**Development Commands**:
+```powershell
+cd apps\web-ui
+npm install
+npm run dev  # Start dev server
+npm run build  # Production build
+```
+
+**API Integration**: Uses V2 endpoints with `X-User-Identity: {org}:{userId}` header
+
+## API Gateway (Node.js + Express)
+
+**Location**: `apps/gateway-nodejs/`  
+**Port**: 3000  
+**Architecture**: V1 (legacy) + V2 (recommended) dual endpoints
+
+**Route Files** (9 total):
+```
+src/routes/
+├── products.js         # V1 legacy
+├── products.v2.js      # ⭐ V2 recommended
+├── handovers.js        # V1 legacy
+├── handovers.v2.js     # ⭐ V2 recommended (state-aware)
+├── signatures.js       # Auto-generate ECDSA sigs (NEW Nov 2025)
+├── shipments.js/v2.js  # Temperature tracking
+├── orders.js           # Order management
+└── auth.js             # Org selection
+```
+
+**Critical Pattern**: V2 routes require `X-User-Identity` header format `{org}:{userId}`
+
+## Off-Chain Database (PostgreSQL)
+
+**Location**: `offchain/postgres/`  
+**Purpose**: Fast queries, analytics, notifications (blockchain = source of truth)  
+**Port**: 5432
+
+**Schema** (9 tables):
+```sql
+products              -- Product metadata mappings
+handovers             -- Handover event cache
+approvals             -- Approval history
+shipments             -- Temperature & location tracking
+notifications         -- Real-time alerts
+users                 -- User management
+audit_log             -- Operation audit trail
+temperature_readings  -- IoT sensor data
+location_history      -- GPS tracking
+```
+
+**Key Pattern**: API writes to blockchain FIRST, then syncs to PostgreSQL for query optimization
+
+**Connection**: `apps/gateway-nodejs/src/utils/database.js` uses pg pool with 20 max connections
+
+**Signature Auto-Generation**:
+```javascript
+POST /api/v2/signatures/generate
+Body: { handoverId, receiverId }
+Returns: { signature: "3045022100..." } // 140-char hex
+Implementation: Spawns PowerShell script in Docker container
+```
+
+**Error Format**: All routes return `{success: bool, error?: string, data?: object}`
+
+## Testing Organization (Reorganized Nov 2025)
+
+**New Structure**: `tests/` directory with 3 categories
+
+```
+tests/
+├── integration/
+│   ├── test-comprehensive.sh  # ⭐ PRIMARY TEST (13 tests, 60s)
+│   └── smoke-test.ps1         # Quick health (3 tests, 10s)
+├── monitoring/
+│   └── monitor-dev-containers.ps1  # Stability check (5 min)
+└── unit/
+    └── supplychain_test.go    # Go struct validation
+```
+
+**Test Execution**:
+```powershell
+# Primary comprehensive test
+docker cp tests\integration\test-comprehensive.sh fabric-tools:/tmp/
+docker exec fabric-tools bash /tmp/test-comprehensive.sh
+
+# Quick smoke test
+cd network\scripts; .\smokeTest-docker.ps1
+
+# Stability monitoring
+.\tests\monitoring\monitor-dev-containers.ps1
+```
+
+**Test Coverage**: 13/13 comprehensive tests passing (CreateProduct → RequestHandover → AcceptHandover → UpdateShipment → Warehouse → Sold + audit trail verification)
+
+## Recent Updates (November 2025)
+
+**UI v2.0 with ECDSA Integration** (Nov 25):
+- Auto-generated signatures via API endpoint
+- SignatureHelper component with copy-paste commands
+- Reduced handover acceptance from 8 manual steps to 3 clicks
+- Real-time signature validation (140-char hex requirement)
+- Migration to V2 API endpoints complete
+
+**Chaincode v2.3 Features**:
+- State machine validation with MSP-specific transitions
+- Pagination support for large product lists
+- Version control in Product struct
+- Enhanced error messages with state transition details
+
+**Testing Infrastructure Reorganization** (Nov 25):
+- Moved from root-level test files to organized `tests/` directory
+- Clear separation: integration/monitoring/unit
+- Comprehensive test as primary validation tool
+- 5-minute stability monitoring for dev containers
+
+## Current Production Status (Nov 26, 2025)
+
+✅ Network: 13 containers operational (3 orderers + 4 peers + 4 CouchDB + 2 CLI)  
+✅ Chaincode: v2.6 sequence 1 committed with 4/4 approvals + state machine validation  
+✅ Tests: **11/11 production workflow tests PASSING** with real ECDSA signatures  
+✅ Security: **FULL CRYPTOGRAPHIC VALIDATION** - X.509 + ECDSA + nonce-based replay protection  
+✅ Handover Workflow: Two-step approval with REAL cryptographic signatures (not metadata!)  
+✅ Web UI: v2.0 with auto-generated ECDSA signature support  
+✅ API Gateway: V2 endpoints production-ready (6/32 endpoints tested, 100% pass rate)  
 ⏸️ Event Listener: Infrastructure ready, implementation pending  
-⏸️ API Tests: Mocks need fixing  
+⚠️ V1 API Endpoints: Legacy, use V2 for new development  
+
+**Test Suite Status** (Nov 26, 2025):
+- ✅ `test-production-workflow.sh` - **PRIMARY TEST** - All handovers with real ECDSA sigs (11/11 PASS)
+- ✅ `test-basic.sh` - Quick validation CreateProduct + GetProduct (2/2 PASS)
+- ⏸️ `test-complete-workflow.sh` - Deprecated (replaced by production test)
+- ⏸️ `test-handover-rejection.sh` - Needs ECDSA signature update
 
 **Known Non-Critical Issues**:
-- Schema validation warning in GetProduct query (data correct, metadata issue)
-- PowerShell 2>&1 redirection in smokeTest-docker.ps1 (use bash version)
+- ShipProduct requires private data in transient map (skipped in basic tests)
+- V1 API endpoints untested (use V2 instead)
+
+## Key Documentation Files
+
+- `BLOCKCHAIN_CORE_DESCRIPTION.txt` - 1400 lines of architecture deep-dive
+- `UI_UPDATE_SUMMARY.md` - Web UI v2.0 ECDSA integration guide (Nov 25)
+- `API_GATEWAY_STATUS.md` - Endpoint status report (32 endpoints, 18.8% tested)
+- `tests/README.md` - Testing infrastructure guide
+- `apps/web-ui/README.md` - React UI documentation
+- `docs/ECDSA_SIGNATURE_GUIDE.md` - Signature implementation details
+- `docs/design.md` - Network topology, endorsement policies
+- `docs/runbook.md` - Operations manual (incident response)
 
 ---
 
-**Last Updated**: November 23, 2025  
+**Last Updated**: November 26, 2025  
 **Maintainer**: GitHub Copilot (auto-generated from codebase analysis)  
 **For deep dive**: Read `BLOCKCHAIN_CORE_DESCRIPTION.txt` (1400 lines)

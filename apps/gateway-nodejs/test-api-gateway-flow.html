@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Gateway Tester - Supply Chain</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1
+                class="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                API Gateway Tester
+            </h1>
+            <p class="text-gray-400">Test Complete Supply Chain Workflow</p>
+            <div class="mt-2 text-sm text-gray-500">
+                Gateway: <span id="gateway-url" class="text-blue-400">http://localhost:3000</span>
+            </div>
+        </div>
+
+        <!-- Organization Selector -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-6 border border-gray-700">
+            <h2 class="text-xl font-semibold mb-4">Current Organization</h2>
+            <div class="grid grid-cols-4 gap-4 mb-4">
+                <button onclick="setOrg('manufacturer')" id="btn-manufacturer"
+                    class="org-btn p-4 rounded-lg border-2 bg-blue-500 border-white transition-all">
+                    <div class="text-3xl mb-2">📦</div>
+                    <div class="text-sm font-semibold">Manufacturer</div>
+                </button>
+                <button onclick="setOrg('shipper')" id="btn-shipper"
+                    class="org-btn p-4 rounded-lg border-2 bg-gray-700 border-gray-600 hover:border-gray-500 transition-all">
+                    <div class="text-3xl mb-2">🚚</div>
+                    <div class="text-sm font-semibold">Shipper</div>
+                </button>
+                <button onclick="setOrg('warehouse')" id="btn-warehouse"
+                    class="org-btn p-4 rounded-lg border-2 bg-gray-700 border-gray-600 hover:border-gray-500 transition-all">
+                    <div class="text-3xl mb-2">🏢</div>
+                    <div class="text-sm font-semibold">Warehouse</div>
+                </button>
+                <button onclick="setOrg('retailer')" id="btn-retailer"
+                    class="org-btn p-4 rounded-lg border-2 bg-gray-700 border-gray-600 hover:border-gray-500 transition-all">
+                    <div class="text-3xl mb-2">🛒</div>
+                    <div class="text-sm font-semibold">Retailer</div>
+                </button>
+            </div>
+            <div class="flex gap-4">
+                <input type="text" id="user-id" value="user1" placeholder="User ID"
+                    class="flex-1 bg-gray-700 text-white px-4 py-2 rounded border border-gray-600 focus:outline-none focus:border-blue-500">
+                <div class="bg-gray-700 px-4 py-2 rounded border border-gray-600">
+                    Identity: <span id="current-identity" class="text-blue-400">manufacturer:user1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Actions -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Complete Workflow -->
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                    ▶️ Complete Workflow
+                </h2>
+                <p class="text-gray-400 text-sm mb-4">
+                    Run full test: Create → Handover → Accept → Verify
+                </p>
+                <button onclick="runCompleteWorkflow()" id="btn-workflow"
+                    class="w-full py-3 rounded-lg font-semibold bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 transition-all">
+                    Start Complete Test
+                </button>
+            </div>
+
+            <!-- Individual Tests -->
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <h2 class="text-xl font-semibold mb-4">Individual Tests</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="testHealthCheck()"
+                        class="test-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-all">
+                        Health Check
+                    </button>
+                    <button onclick="testCreateProduct()"
+                        class="test-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-all">
+                        Create Product
+                    </button>
+                    <button onclick="testGetProduct()"
+                        class="test-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-all">
+                        Get Product
+                    </button>
+                    <button onclick="testGetAllProducts()"
+                        class="test-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-all">
+                        All Products
+                    </button>
+                    <button onclick="testGetPendingHandovers()"
+                        class="test-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-all">
+                        Pending Handovers
+                    </button>
+                    <button onclick="testAcceptHandover()"
+                        class="test-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-all">
+                        Accept Handover
+                    </button>
+                    <button onclick="testProductHistory()"
+                        class="test-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-all">
+                        Product History
+                    </button>
+                    <button onclick="testRequestHandover()"
+                        class="test-btn px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-all">
+                        Request Handover
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current IDs -->
+        <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <span class="text-gray-400">Product ID:</span>
+                    <span id="product-id" class="text-green-400 font-mono ml-2">None</span>
+                </div>
+                <div>
+                    <span class="text-gray-400">Handover ID:</span>
+                    <span id="handover-id" class="text-purple-400 font-mono ml-2">None</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Test Logs</h2>
+                <button onclick="clearLogs()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm">
+                    Clear Logs
+                </button>
+            </div>
+
+            <div id="logs" class="log-container bg-gray-900 rounded p-4 font-mono text-sm">
+                <div class="text-gray-500 text-center py-8">
+                    No logs yet. Start a test to see results.
+                </div>
+            </div>
+        </div>
+
+        <!-- API Reference -->
+        <div class="mt-6 bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h2 class="text-xl font-semibold mb-4">API Endpoints Reference</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div class="bg-gray-900 p-3 rounded">
+                    <div class="text-blue-400 font-semibold mb-2">Products</div>
+                    <div class="text-gray-400 space-y-1">
+                        <div>POST /api/v2/products</div>
+                        <div>GET /api/v2/products/:id</div>
+                        <div>GET /api/v2/products</div>
+                        <div>GET /api/v2/products/:id/history</div>
+                    </div>
+                </div>
+                <div class="bg-gray-900 p-3 rounded">
+                    <div class="text-green-400 font-semibold mb-2">Handovers</div>
+                    <div class="text-gray-400 space-y-1">
+                        <div>POST /api/v2/handovers/manufacturer-shipper</div>
+                        <div>POST /api/v2/handovers/shipper-warehouse</div>
+                        <div>GET /api/v2/handovers/pending</div>
+                        <div>POST /api/v2/handovers/:id/accept</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        let currentOrg = 'manufacturer';
+        let userId = 'user1';
+        let productId = '';
+        let handoverId = '';
+        let isRunning = false;
+
+        const ORG_COLORS = {
+            manufacturer: 'bg-blue-500',
+            shipper: 'bg-green-500',
+            warehouse: 'bg-purple-500',
+            retailer: 'bg-orange-500'
+        };
+
+        // Helper functions
+        function setOrg(org) {
+            currentOrg = org;
+            updateIdentity();
+
+            // Update button styles
+            document.querySelectorAll('.org-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'border-white');
+                btn.classList.add('bg-gray-700', 'border-gray-600');
+            });
+
+            const selectedBtn = document.getElementById(`btn-${org}`);
+            selectedBtn.classList.remove('bg-gray-700', 'border-gray-600');
+            selectedBtn.classList.add(ORG_COLORS[org], 'border-white');
+        }
+
+        function updateIdentity() {
+            userId = document.getElementById('user-id').value;
+            document.getElementById('current-identity').textContent = `${currentOrg}:${userId}`;
+        }
+
+        document.getElementById('user-id').addEventListener('input', updateIdentity);
+
+        function getHeaders(org = currentOrg) {
+            return {
+                'Content-Type': 'application/json',
+                'X-User-Identity': `${org}:${userId}`
+            };
+        }
+
+        function addLog(message, type = 'info', data = null) {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            const colors = {
+                success: 'text-green-400',
+                error: 'text-red-400',
+                warning: 'text-yellow-400',
+                info: 'text-gray-300'
+            };
+
+            if (logsDiv.querySelector('.text-center')) {
+                logsDiv.innerHTML = '';
+            }
+
+            const logEntry = document.createElement('div');
+            logEntry.className = 'mb-2 flex items-start gap-2';
+            logEntry.innerHTML = `
+                <span>${icons[type]}</span>
+                <span class="text-gray-500">[${timestamp}]</span>
+                <span class="${colors[type]}">${message}</span>
+            `;
+
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+
+            if (data) {
+                console.log('API Response:', data);
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = `
+                <div class="text-gray-500 text-center py-8">
+                    No logs yet. Start a test to see results.
+                </div>
+            `;
+        }
+
+        function setProductId(id) {
+            productId = id;
+            document.getElementById('product-id').textContent = id || 'None';
+        }
+
+        function setHandoverId(id) {
+            handoverId = id;
+            document.getElementById('handover-id').textContent = id || 'None';
+        }
+
+        function setRunning(running) {
+            isRunning = running;
+            const workflowBtn = document.getElementById('btn-workflow');
+            const testBtns = document.querySelectorAll('.test-btn');
+
+            if (running) {
+                workflowBtn.innerHTML = '⏳ Running Tests...';
+                workflowBtn.disabled = true;
+                workflowBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                testBtns.forEach(btn => btn.disabled = true);
+            } else {
+                workflowBtn.innerHTML = 'Start Complete Test';
+                workflowBtn.disabled = false;
+                workflowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                testBtns.forEach(btn => btn.disabled = false);
+            }
+        }
+
+        async function apiCall(endpoint, options = {}, org = currentOrg) {
+            const url = `${API_BASE}${endpoint}`;
+            addLog(`📡 ${options.method || 'GET'} ${endpoint}`, 'info');
+
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: getHeaders(org)
+                });
+
+                const data = await response.json();
+                addLog(`data: ${JSON.stringify(data)}`);
+                if (response.ok) {
+                    addLog(`✅ Success: ${response.status}`, 'success', data);
+                    return { success: true, data, status: response.status };
+                } else {
+                    addLog(`❌ Error: ${response.status} - ${data.error || 'Unknown'}`, 'error', data);
+                    return { success: false, error: data.error || 'Unknown error', status: response.status };
+                }
+            } catch (error) {
+                addLog(`💥 Network Error: ${error.message}`, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // Test functions
+        async function testHealthCheck() {
+            setRunning(true);
+            addLog('🏥 Testing Health Check...', 'info');
+            await apiCall('/health');
+            setRunning(false);
+        }
+
+        async function testCreateProduct() {
+            setRunning(true);
+            const newProductId = `PROD-${Date.now()}`;
+            setProductId(newProductId);
+
+            addLog('📦 Creating Product...', 'info');
+            const result = await apiCall('/api/v2/products', {
+                method: 'POST',
+                body: JSON.stringify({
+                    id: newProductId,
+                    name: 'Premium Jasmine Rice',
+                    batch: `BATCH-${new Date().toISOString().split('T')[0]}`,
+                    origin: 'An Giang Province',
+                    manufactureDate: new Date().toISOString().split('T')[0],
+                    metaHash: `ipfs://QmHash${Date.now()}`
+                })
+            }, 'manufacturer');
+
+            if (result.success) {
+                addLog(`✨ Product created: ${newProductId}`, 'success');
+            }
+            setRunning(false);
+        }
+
+        async function testGetProduct() {
+            if (!productId) {
+                alert('Please create a product first or enter a product ID');
+                return;
+            }
+            setRunning(true);
+            addLog(`🔍 Getting Product: ${productId}`, 'info');
+            await apiCall(`/api/v2/products/${productId}`);
+            setRunning(false);
+        }
+
+        async function testGetAllProducts() {
+            setRunning(true);
+            addLog('📋 Getting All Products...', 'info');
+            await apiCall('/api/v2/products');
+            setRunning(false);
+        }
+
+        async function testRequestHandover() {
+            if (!productId) {
+                alert('Please create a product first');
+                return;
+            }
+            setRunning(true);
+
+            let endpoint = '';
+            let body = { productId };
+
+            if (currentOrg === 'manufacturer') {
+                endpoint = '/api/v2/handovers/manufacturer-shipper';
+                body.shipperId = 'SHIPPER-001';
+                body.waybill = `WB-${Date.now()}`;
+            } else if (currentOrg === 'shipper') {
+                endpoint = '/api/v2/handovers/shipper-warehouse';
+                body.warehouseId = 'WAREHOUSE-001';
+            } else if (currentOrg === 'warehouse') {
+                endpoint = '/api/v2/handovers/warehouse-retailer';
+                body.retailerId = 'RETAILER-001';
+            } else {
+                alert('Invalid organization for handover request');
+                setRunning(false);
+                return;
+            }
+
+            addLog(`🤝 Requesting Handover from ${currentOrg}`, 'info');
+            const result = await apiCall(endpoint, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            }, currentOrg);
+
+            if (result.success && result.data.data) {
+                setHandoverId(result.data.data.handoverId);
+            }
+            setRunning(false);
+        }
+
+        async function testGetPendingHandovers() {
+            setRunning(true);
+            addLog(`⏳ Getting Pending Handovers for ${currentOrg}`, 'info');
+            await apiCall('/api/v2/handovers/pending', {}, currentOrg);
+            setRunning(false);
+        }
+
+        async function testAcceptHandover() {
+            if (!handoverId) {
+                alert('Please request a handover first or enter a handover ID');
+                return;
+            }
+            setRunning(true);
+            addLog(`✅ Accepting Handover: ${handoverId}`, 'info');
+            await apiCall(`/api/v2/handovers/${handoverId}/accept`, {
+                method: 'POST',
+                body: JSON.stringify({ receiverId: `RECEIVER-${currentOrg.toUpperCase()}-001` })
+            }, currentOrg);
+            setRunning(false);
+        }
+
+        async function testProductHistory() {
+            if (!productId) {
+                alert('Please create a product first');
+                return;
+            }
+            setRunning(true);
+            addLog(`📜 Getting Product History: ${productId}`, 'info');
+            await apiCall(`/api/v2/products/${productId}/history`);
+            setRunning(false);
+        }
+
+        // Complete workflow
+        async function runCompleteWorkflow() {
+            setRunning(true);
+            clearLogs();
+
+            addLog('🚀 Starting Complete Workflow Test...', 'info');
+            addLog('═══════════════════════════════════════', 'info');
+
+            // 1. Health Check
+            addLog('\n📍 Step 1: Health Check', 'info');
+            await apiCall('/health');
+            await sleep(1000);
+
+            // 2. Create Product
+            addLog('\n📍 Step 2: Create Product (Manufacturer)', 'info');
+            const newProductId = `PROD-${Date.now()}`;
+            setProductId(newProductId);
+
+            const createResult = await apiCall('/api/v2/products', {
+                method: 'POST',
+                body: JSON.stringify({
+                    id: newProductId,
+                    name: 'Premium Jasmine Rice',
+                    batch: `BATCH-${new Date().toISOString().split('T')[0]}`,
+                    origin: 'An Giang Province',
+                    manufactureDate: new Date().toISOString().split('T')[0],
+                    metaHash: `ipfs://QmHash${Date.now()}`
+                })
+            }, 'manufacturer');
+
+            if (!createResult.success) {
+                addLog('❌ Workflow stopped: Failed to create product', 'error');
+                setRunning(false);
+                return;
+            }
+            await sleep(2000);
+
+            // 3. Get Product
+            addLog('\n📍 Step 3: Get Product Details', 'info');
+            await apiCall(`/api/v2/products/${newProductId}`);
+            await sleep(1000);
+
+            // 4. Get All Products
+            addLog('\n📍 Step 4: Get All Products', 'info');
+            await apiCall('/api/v2/products');
+            await sleep(1000);
+
+            // 5. Manufacturer → Shipper Handover
+            addLog('\n📍 Step 5: Request Handover (Manufacturer → Shipper)', 'info');
+            const handoverResult = await apiCall('/api/v2/handovers/manufacturer-shipper', {
+                method: 'POST',
+                body: JSON.stringify({
+                    productId: newProductId,
+                    shipperId: 'SHIPPER-001',
+                    waybill: `WB-${Date.now()}`
+                })
+            }, 'manufacturer');
+
+            if (!handoverResult.success) {
+                addLog('❌ Workflow stopped: Failed to request handover', 'error');
+                setRunning(false);
+                return;
+            }
+
+            const newHandoverId = handoverResult.data.data.handoverId;
+            setHandoverId(newHandoverId);
+            await sleep(2000);
+
+            // 6. Get Pending Handovers
+            addLog('\n📍 Step 6: Get Pending Handovers (Shipper)', 'info');
+            await apiCall('/api/v2/handovers/pending', {}, 'shipper');
+            await sleep(1000);
+
+            // 7. Shipper Accepts
+            addLog('\n📍 Step 7: Accept Handover (Shipper)', 'info');
+            await apiCall(`/api/v2/handovers/${newHandoverId}/accept`, {
+                method: 'POST',
+                body: JSON.stringify({ receiverId: 'RECEIVER-SHIPPER-001' })
+            }, 'shipper');
+            await sleep(2000);
+
+            // 8. Verify Transfer
+            addLog('\n📍 Step 8: Verify Product Status (Should be InTransit)', 'info');
+            await apiCall(`/api/v2/products/${newProductId}`);
+            await sleep(1000);
+
+            // 9. Get History
+            addLog('\n📍 Step 9: Get Product History (Audit Trail)', 'info');
+            await apiCall(`/api/v2/products/${newProductId}/history`);
+            await sleep(1000);
+
+            addLog('\n═══════════════════════════════════════', 'info');
+            addLog('✅ Complete Workflow Test Finished!', 'success');
+
+            setRunning(false);
+        }
+
+        // Initialize
+        updateIdentity();
+        addLog('💡 Ready to test! Select an organization and start testing.', 'info');
+    </script>
+</body>
+
+</html>

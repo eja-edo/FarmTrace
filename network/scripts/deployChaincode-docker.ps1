@@ -9,16 +9,19 @@ Write-Host "Deploying chaincode using Docker..." -ForegroundColor Yellow
 
 $CHANNEL_NAME = "supplychain-channel"
 $CC_NAME = "supplychain_cc"
-$CC_VERSION = "1.0"
-$CC_SEQUENCE = 1
+$CC_VERSION = "2.7"
+$CC_SEQUENCE = if ($env:CC_SEQUENCE) { [int]$env:CC_SEQUENCE } else { 1 }
+$CC_LABEL = "supplychain_cc_${CC_VERSION}"
 $CC_PATH = "../chaincode/go"
+$COLLECTIONS_CONFIG = "/opt/gopath/src/github.com/hyperledger/fabric/chaincode/go/collections_config.json"
 
 # Package chaincode
 Write-Host "Packaging chaincode..." -ForegroundColor Yellow
-docker exec fabric-tools peer lifecycle chaincode package supplychain_cc.tar.gz `
+$packageFile = "${CC_LABEL}.tar.gz"
+docker exec fabric-tools peer lifecycle chaincode package $packageFile `
     --path /opt/gopath/src/github.com/hyperledger/fabric/chaincode/go `
     --lang golang `
-    --label supplychain_cc_1.0
+    --label $CC_LABEL
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Failed to package chaincode" -ForegroundColor Red
@@ -41,7 +44,7 @@ foreach ($peer in $peers) {
         -e CORE_PEER_ADDRESS=$($peer.Peer) `
         -e CORE_PEER_MSPCONFIGPATH=$($peer.MspPath) `
         -e CORE_PEER_TLS_ROOTCERT_FILE=$($peer.TlsCert) `
-        fabric-tools peer lifecycle chaincode install supplychain_cc.tar.gz
+        fabric-tools peer lifecycle chaincode install $packageFile
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "WARNING: Failed to install chaincode on $($peer.Peer)" -ForegroundColor Yellow
@@ -52,7 +55,7 @@ foreach ($peer in $peers) {
 
 # Get package ID
 Write-Host "Querying installed chaincode..." -ForegroundColor Yellow
-$packageId = docker exec fabric-tools peer lifecycle chaincode queryinstalled | Select-String -Pattern "supplychain_cc_1.0" | ForEach-Object { ($_ -split ", ")[0] -replace "Package ID: ", "" }
+$packageId = docker exec fabric-tools peer lifecycle chaincode queryinstalled | Select-String -Pattern "$CC_LABEL" | Select-Object -First 1 | ForEach-Object { ($_ -split ", ")[0] -replace "Package ID: ", "" }
 
 if (-not $packageId) {
     Write-Host "ERROR: Could not find package ID" -ForegroundColor Red
@@ -77,6 +80,7 @@ foreach ($peer in $peers) {
         --version $CC_VERSION `
         --package-id $packageId `
         --sequence $CC_SEQUENCE `
+        --collections-config $COLLECTIONS_CONFIG `
         --tls `
         --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
     
@@ -94,6 +98,7 @@ docker exec fabric-tools peer lifecycle chaincode checkcommitreadiness `
     --name $CC_NAME `
     --version $CC_VERSION `
     --sequence $CC_SEQUENCE `
+    --collections-config $COLLECTIONS_CONFIG `
     --tls `
     --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem `
     --output json
@@ -106,6 +111,7 @@ docker exec fabric-tools peer lifecycle chaincode commit `
     --name $CC_NAME `
     --version $CC_VERSION `
     --sequence $CC_SEQUENCE `
+    --collections-config $COLLECTIONS_CONFIG `
     --tls `
     --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem `
     --peerAddresses peer0.manufacturer.example.com:7051 `

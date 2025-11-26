@@ -79,7 +79,8 @@ router.get('/pending', async (req, res) => {
       'GetPendingHandoversForOrg'
     );
 
-    const handovers = JSON.parse(result.toString());
+    const resultStr = result ? result.toString() : '';
+    const handovers = resultStr && resultStr.trim() !== '' ? JSON.parse(resultStr) : [];
 
     logger.info(`Found ${handovers ? handovers.length : 0} pending handovers`);
 
@@ -119,7 +120,14 @@ router.get('/:id',
         id
       );
 
-      const handover = JSON.parse(result.toString());
+      const resultStr = result ? result.toString() : '';
+      const handover = resultStr && resultStr.trim() !== '' ? JSON.parse(resultStr) : null;
+      if (!handover) {
+        return res.status(404).json({
+          success: false,
+          error: 'Handover not found'
+        });
+      }
 
       res.json({
         success: true,

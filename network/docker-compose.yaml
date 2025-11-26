@@ -187,6 +187,11 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
       - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9446
       - CORE_METRICS_PROVIDER=prometheus
+      # Chaincode keepalive: 120s interval, prevents both idle timeout and ping flood
+      - CORE_CHAINCODE_KEEPALIVE=120
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_CHAINCODE_STARTUPTIMEOUT=300s
+      - CORE_VM_DOCKER_ATTACHSTDOUT=true
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:
@@ -241,6 +246,11 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
       - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9447
       - CORE_METRICS_PROVIDER=prometheus
+      # Chaincode keepalive settings to prevent "too_many_pings" error
+      - CORE_CHAINCODE_KEEPALIVE=120
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_CHAINCODE_STARTUPTIMEOUT=300s
+      - CORE_VM_DOCKER_ATTACHSTDOUT=true
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:
@@ -295,6 +305,11 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
       - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9448
       - CORE_METRICS_PROVIDER=prometheus
+      # Chaincode keepalive settings to prevent "too_many_pings" error
+      - CORE_CHAINCODE_KEEPALIVE=120
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_CHAINCODE_STARTUPTIMEOUT=300s
+      - CORE_VM_DOCKER_ATTACHSTDOUT=true
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:
@@ -349,6 +364,11 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
       - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9449
       - CORE_METRICS_PROVIDER=prometheus
+      # Chaincode keepalive settings to prevent "too_many_pings" error
+      - CORE_CHAINCODE_KEEPALIVE=120
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+      - CORE_CHAINCODE_STARTUPTIMEOUT=300s
+      - CORE_VM_DOCKER_ATTACHSTDOUT=true
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:
