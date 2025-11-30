@@ -28,7 +28,7 @@ export default function ProductDetail() {
     const { data: history } = useQuery(
         ['product-history', productId],
         () => productApi.getHistory(productId),
-        { enabled: !!productId }
+        { enabled: !!product }
     )
 
     if (isLoading) {

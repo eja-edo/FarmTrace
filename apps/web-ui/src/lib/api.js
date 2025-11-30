@@ -11,16 +11,17 @@ const apiClient = axios.create({
     },
 })
 
-// Request interceptor
+// Request interceptor - ĐÃ SỬA: Đúng format X-User-Identity
 apiClient.interceptors.request.use(
     (config) => {
         const orgContext = localStorage.getItem('selectedOrg')
         const userId = localStorage.getItem('userId') || 'user1'
 
-        // Use X-User-Identity header format: org:userId
+        // CRITICAL: Gateway yêu cầu format: {organization}:{userId}
         if (orgContext) {
             config.headers['X-User-Identity'] = `${orgContext}:${userId}`
         }
+
         return config
     },
     (error) => {
@@ -45,127 +46,99 @@ apiClient.interceptors.response.use(
 )
 
 // ============================================
-// PRODUCT APIs
+// PRODUCT APIs (V2 - Đúng theo Gateway Guide)
 // ============================================
 
 export const productApi = {
-    // Create new product (V2)
+    // Create new product (Manufacturer only)
     create: async (data) => {
         const response = await apiClient.post('/api/v2/products', data)
         return response.data
     },
 
-    // Get product by ID (V2)
+    // Get product by ID
     getById: async (productId) => {
         const response = await apiClient.get(`/api/v2/products/${productId}`)
         return response.data
     },
 
-    // Get all products (V2)
+    // Get all products (with optional filters)
     getAll: async (filters = {}) => {
-        const response = await apiClient.get('/api/v2/products', { params: filters })
+        const params = {}
+        if (filters.status) params.status = filters.status
+        if (filters.owner) params.owner = filters.owner
+
+        const response = await apiClient.get('/api/v2/products', { params })
         return response.data
     },
 
-    // Get product history (V2)
+    // Get product history (audit trail)
     getHistory: async (productId) => {
         const response = await apiClient.get(`/api/v2/products/${productId}/history`)
-        return response.data
-    },
-
-    // Mark product as sold (V2)
-    markAsSold: async (productId, data) => {
-        const response = await apiClient.put(`/api/v2/products/${productId}/sold`, data)
         return response.data
     },
 }
 
 // ============================================
-// HANDOVER APIs
+// HANDOVER APIs (V2 - Auto-signature by Gateway)
 // ============================================
 
 export const handoverApi = {
-    // Request handover manufacturer -> shipper (V2)
+    // Request handover: Manufacturer → Shipper
     requestManufacturerToShipper: async (data) => {
-        const response = await apiClient.post('/api/v2/handovers/manufacturer-shipper', data)
+        // Gateway auto-signs with Manufacturer's key
+        const response = await apiClient.post('/api/v2/handovers/manufacturer-shipper', {
+            productId: data.productId,
+            shipperId: data.shipperId,
+            waybill: data.waybill,
+            // NO signature needed - gateway handles it!
+        })
         return response.data
     },
 
-    // Request handover shipper -> warehouse (V2)
+    // Request handover: Shipper → Warehouse
     requestShipperToWarehouse: async (data) => {
-        const response = await apiClient.post('/api/v2/handovers/shipper-warehouse', data)
+        // Gateway auto-signs with Shipper's key
+        const response = await apiClient.post('/api/v2/handovers/shipper-warehouse', {
+            productId: data.productId,
+            warehouseId: data.warehouseId,
+            // NO signature needed - gateway handles it!
+        })
         return response.data
     },
 
-    // Get pending handovers (V2)
+    // Get pending handovers for current organization
     getPending: async () => {
         const response = await apiClient.get('/api/v2/handovers/pending')
         return response.data
     },
 
-    // Accept handover (V2)
+    // Accept handover (Gateway auto-queries nonce and signs)
     accept: async (handoverId, data) => {
-        const response = await apiClient.post(`/api/v2/handovers/${handoverId}/accept`, data)
+        // Gateway automatically:
+        // 1. Queries handover to get nonce
+        // 2. Generates message: {handoverId}:{nonce}:{receiverId}
+        // 3. Signs with recipient's private key
+        // 4. Submits to blockchain
+        const response = await apiClient.post(`/api/v2/handovers/${handoverId}/accept`, {
+            receiverId: data.receiverId,
+            // NO signature needed - gateway handles it!
+        })
         return response.data
     },
 
-    // Reject handover (V2)
+    // Reject handover (Gateway auto-signs)
     reject: async (handoverId, data) => {
-        const response = await apiClient.post(`/api/v2/handovers/${handoverId}/reject`, data)
+        const response = await apiClient.post(`/api/v2/handovers/${handoverId}/reject`, {
+            reason: data.reason,
+            // NO signature needed - gateway handles it!
+        })
         return response.data
     },
 
-    // Get handover by ID (V2)
+    // Get handover by ID
     getById: async (handoverId) => {
         const response = await apiClient.get(`/api/v2/handovers/${handoverId}`)
-        return response.data
-    },
-}
-
-// ============================================
-// SHIPMENT APIs
-// ============================================
-
-export const shipmentApi = {
-    // Create new shipment
-    create: async (data) => {
-        const response = await apiClient.post('/api/shipments', data)
-        return response.data
-    },
-
-    // Update shipment
-    update: async (shipmentId, data) => {
-        const response = await apiClient.patch(`/api/shipments/${shipmentId}`, data)
-        return response.data
-    },
-
-    // Get shipment by ID
-    getById: async (shipmentId) => {
-        const response = await apiClient.get(`/api/shipments/${shipmentId}`)
-        return response.data
-    },
-}
-
-// ============================================
-// ORDER APIs
-// ============================================
-
-export const orderApi = {
-    // Create new order
-    create: async (data) => {
-        const response = await apiClient.post('/api/orders', data)
-        return response.data
-    },
-
-    // Get order by ID
-    getById: async (orderId) => {
-        const response = await apiClient.get(`/api/orders/${orderId}`)
-        return response.data
-    },
-
-    // Get all orders
-    getAll: async (filters = {}) => {
-        const response = await apiClient.get('/api/orders', { params: filters })
         return response.data
     },
 }
@@ -176,7 +149,7 @@ export const orderApi = {
 
 export const healthApi = {
     check: async () => {
-        const response = await apiClient.get('/api/health')
+        const response = await apiClient.get('/health')
         return response.data
     },
 }

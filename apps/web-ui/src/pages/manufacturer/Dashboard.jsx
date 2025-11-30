@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useQuery } from 'react-query'
 import {
     Package,
@@ -22,7 +22,10 @@ export default function ManufacturerDashboard() {
 
     const { data: pendingHandoversResponse, isLoading: loadingHandovers } = useQuery(
         ['handovers', 'manufacturer', 'pending'],
-        () => handoverApi.getPending()
+        () => handoverApi.getPending(),
+        {
+            enabled: !!productsResponse
+        }
     )
 
     const products = productsResponse?.data || []
@@ -83,6 +86,24 @@ export default function ManufacturerDashboard() {
             textColor: 'text-blue-600',
         },
     ]
+
+    const [productId, setProductId] = useState('')
+    const [shipperId, setShipperId] = useState('')
+    const [waybill, setWaybill] = useState('')
+    const [response, setResponse] = useState(null)
+
+    const handleRequestHandover = async () => {
+        try {
+            const result = await handoverApi.requestManufacturerToShipper({
+                productId,
+                shipperId,
+                waybill,
+            })
+            setResponse(result)
+        } catch (error) {
+            setResponse(error.response?.data || { success: false, error: error.message })
+        }
+    }
 
     return (
         <div className="space-y-6">
@@ -149,35 +170,35 @@ export default function ManufacturerDashboard() {
                         {manufacturerProducts.slice(0, 5).map((product) => {
                             const productId = getProductId(product)
                             return (
-                            <div
+                                <div
                                     key={productId}
-                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center justify-center w-12 h-12 bg-manufacturer/10 rounded-lg">
-                                        <Package className="w-6 h-6 text-manufacturer" />
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-gray-900">
+                                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center justify-center w-12 h-12 bg-manufacturer/10 rounded-lg">
+                                            <Package className="w-6 h-6 text-manufacturer" />
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-gray-900">
                                                 {product.name || product.productName}
-                                        </p>
-                                        <p className="text-sm text-gray-600">
+                                            </p>
+                                            <p className="text-sm text-gray-600">
                                                 ID: {productId}
-                                        </p>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <span className={`badge ${getStatusBadgeClass(product.status)}`}>
+                                            {product.status}
+                                        </span>
+                                        <Link
+                                            to={`/products/${productId}`}
+                                            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                        >
+                                            <Eye className="w-5 h-5 text-gray-600" />
+                                        </Link>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                        <span className={`badge ${getStatusBadgeClass(product.status)}`}>
-                                        {product.status}
-                                    </span>
-                                    <Link
-                                            to={`/products/${productId}`}
-                                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                                    >
-                                        <Eye className="w-5 h-5 text-gray-600" />
-                                    </Link>
-                                </div>
-                            </div>
                             )
                         })}
                     </div>
@@ -251,6 +272,74 @@ export default function ManufacturerDashboard() {
                     <div className="text-center py-12">
                         <ArrowRightLeft className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-600">No pending handovers</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Request Handover to Shipper */}
+            <div className="card">
+                <div className="mb-6">
+                    <h2 className="text-xl font-bold text-gray-900">Request Handover to Shipper</h2>
+                    <p className="text-gray-600">
+                        Fill in the details below to request a handover to the shipper.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Product ID
+                        </label>
+                        <input
+                            type="text"
+                            value={productId}
+                            onChange={(e) => setProductId(e.target.value)}
+                            className="input"
+                            placeholder="Enter Product ID"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Shipper ID
+                        </label>
+                        <input
+                            type="text"
+                            value={shipperId}
+                            onChange={(e) => setShipperId(e.target.value)}
+                            className="input"
+                            placeholder="Enter Shipper ID"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Waybill
+                        </label>
+                        <input
+                            type="text"
+                            value={waybill}
+                            onChange={(e) => setWaybill(e.target.value)}
+                            className="input"
+                            placeholder="Enter Waybill Number"
+                        />
+                    </div>
+                </div>
+                <div className="mt-4">
+                    <button
+                        onClick={handleRequestHandover}
+                        className="btn btn-primary"
+                    >
+                        Request Handover
+                    </button>
+                </div>
+
+                {response && (
+                    <div className="mt-4">
+                        <h3 className="text-sm font-medium text-gray-700 mb-2">
+                            Response:
+                        </h3>
+                        <pre className="bg-gray-50 p-4 rounded-lg text-sm text-gray-800">
+                            {JSON.stringify(response, null, 2)}
+                        </pre>
                     </div>
                 )}
             </div>

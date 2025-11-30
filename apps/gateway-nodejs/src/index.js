@@ -3,9 +3,54 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
+// Simple in-memory sequential queue (no Redis required)
+class SimpleQueue {
+    constructor() { this.queue = []; this.running = false; }
+    enqueue(run) {
+        return new Promise((resolve, reject) => {
+            this.queue.push({ run, resolve, reject });
+            this._kick();
+        });
+    }
+    async _kick() {
+        if (this.running) return;
+        this.running = true;
+        try {
+            while (this.queue.length) {
+                const job = this.queue.shift();
+                try {
+                    const result = await job.run();
+                    job.resolve(result);
+                } catch (err) {
+                    job.reject(err);
+                }
+            }
+        } finally {
+            this.running = false;
+        }
+    }
+}
+
+// Initialize a queue for blockchain transactions (sequential, in-memory)
+const blockchainQueue = new SimpleQueue();
+
 
 const logger = require('./utils/logger');
 const fabricClient = require('./utils/fabricClient');
+
+// Patch fabricClient.submitTransaction to always use the queue (after requires)
+const __origSubmitTransaction = fabricClient.submitTransaction.bind(fabricClient);
+fabricClient.submitTransaction = (...args) => {
+    const desc = (() => {
+        try { return JSON.stringify(args.slice(0, 3)); } catch { return 'submitTransaction'; }
+    })();
+    return blockchainQueue.enqueue(async () => {
+        logger.info(`[Queue] Submitting transaction sequentially: ${desc}`);
+        const res = await __origSubmitTransaction(...args);
+        logger.info(`[Queue] Transaction finished: ${desc}`);
+        return res;
+    });
+};
 
 // V1 Routes (backward compatibility)
 const productRoutes = require('./routes/products');
@@ -25,12 +70,24 @@ const { errorHandler } = require('./middleware/errorHandler');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Initialize a queue for blockchain transactions (handled above)
+// const blockchainQueue = new Queue('blockchain-transactions');
+
 // Middleware
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+
+// Queue processing via in-memory queue is handled by the monkey-patched fabricClient.submitTransaction above.
+// No external worker needed; transactions are executed sequentially within the Node.js process.
+
+// Simple logging middleware; queueing is automatic via patched submitTransaction
+app.use((req, res, next) => {
+    logger.info(`[Middleware] Incoming request: ${req.method} ${req.originalUrl}`);
+    next();
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {

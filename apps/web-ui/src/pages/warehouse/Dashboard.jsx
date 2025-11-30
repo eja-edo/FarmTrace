@@ -22,7 +22,10 @@ export default function WarehouseDashboard() {
 
     const { data: pendingHandoversResponse } = useQuery(
         ['handovers', 'warehouse', 'pending'],
-        () => handoverApi.getPending()
+        () => handoverApi.getPending(),
+        {
+            enabled: !!productsResponse
+        }
     )
 
     const products = productsResponse?.data || []

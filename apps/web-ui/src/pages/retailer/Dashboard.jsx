@@ -22,7 +22,10 @@ export default function RetailerDashboard() {
 
     const { data: pendingHandoversResponse } = useQuery(
         ['handovers', 'retailer', 'pending'],
-        () => handoverApi.getPending()
+        () => handoverApi.getPending(),
+        {
+            enabled: !!inventoryResponse
+        }
     )
 
     const products = inventoryResponse?.data || []
@@ -176,35 +179,35 @@ export default function RetailerDashboard() {
                             .map((product) => {
                                 const productId = getProductId(product)
                                 return (
-                                <div
+                                    <div
                                         key={productId}
-                                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center justify-center w-12 h-12 bg-retailer/10 rounded-lg">
-                                            <Package className="w-6 h-6 text-retailer" />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-900">
+                                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center justify-center w-12 h-12 bg-retailer/10 rounded-lg">
+                                                <Package className="w-6 h-6 text-retailer" />
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-gray-900">
                                                     {product.name || product.productName}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
+                                                </p>
+                                                <p className="text-sm text-gray-600">
                                                     ID: {productId}
-                                            </p>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <span className="badge badge-accepted">
+                                                Available
+                                            </span>
+                                            <Link
+                                                to={`/products/${productId}`}
+                                                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                            >
+                                                <Eye className="w-5 h-5 text-gray-600" />
+                                            </Link>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className="badge badge-accepted">
-                                            Available
-                                        </span>
-                                        <Link
-                                                to={`/products/${productId}`}
-                                            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                                        >
-                                            <Eye className="w-5 h-5 text-gray-600" />
-                                        </Link>
-                                    </div>
-                                </div>
                                 )
                             })}
                     </div>
@@ -230,27 +233,27 @@ export default function RetailerDashboard() {
                             .map((product) => {
                                 const productId = getProductId(product)
                                 return (
-                                <div
+                                    <div
                                         key={productId}
-                                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center justify-center w-12 h-12 bg-green-50 rounded-lg">
-                                            <ShoppingCart className="w-6 h-6 text-green-600" />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-900">
+                                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center justify-center w-12 h-12 bg-green-50 rounded-lg">
+                                                <ShoppingCart className="w-6 h-6 text-green-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-gray-900">
                                                     {product.name || product.productName}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
+                                                </p>
+                                                <p className="text-sm text-gray-600">
                                                     ID: {productId}
-                                            </p>
+                                                </p>
+                                            </div>
                                         </div>
+                                        <span className="badge badge-completed">
+                                            Sold
+                                        </span>
                                     </div>
-                                    <span className="badge badge-completed">
-                                        Sold
-                                    </span>
-                                </div>
                                 )
                             })}
                     </div>

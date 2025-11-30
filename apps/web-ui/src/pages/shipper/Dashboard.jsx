@@ -22,7 +22,10 @@ export default function ShipperDashboard() {
 
     const { data: productsResponse } = useQuery(
         ['products', 'shipper'],
-        () => productApi.getAll()
+        () => productApi.getAll(),
+        {
+            enabled: !!pendingHandoversResponse
+        }
     )
 
     const pendingHandovers = pendingHandoversResponse?.data || []

@@ -40,10 +40,7 @@ export default function HandoverList() {
     const lookupMutation = useMutation(
         (id) => handoverApi.getById(id),
         {
-            onError: (error) => {
-                const message = error.response?.data?.error || 'Unable to fetch handover details'
-                toast.error(message)
-            }
+            enabled: !!pendingData
         }
     )
 
